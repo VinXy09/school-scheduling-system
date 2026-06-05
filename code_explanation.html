@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Scheduling System - Code & Database Connection Guide</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f1f5f9;
+            --accent: #38bdf8;
+            --pointer: #f43f5e;
+            --code-bg: #000;
+        }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 40px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: var(--accent);
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 50px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .section {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 40px;
+            border: 1px solid rgba(255,255,255,0.1);
+            position: relative;
+        }
+        h2 {
+            border-left: 4px solid var(--accent);
+            padding-left: 15px;
+            margin-top: 0;
+            color: var(--accent);
+        }
+        .code-block {
+            background: var(--code-bg);
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            position: relative;
+            border: 1px solid #334155;
+        }
+        .pointer {
+            position: absolute;
+            border: 2px solid var(--pointer);
+            box-shadow: 0 0 10px var(--pointer);
+            border-radius: 4px;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .pointer-label {
+            position: absolute;
+            background: var(--pointer);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            top: -25px;
+            left: 0;
+            white-space: nowrap;
+        }
+        .explanation {
+            margin-top: 20px;
+            background: rgba(56, 189, 248, 0.1);
+            padding: 15px;
+            border-left: 4px solid var(--accent);
+        }
+        .highlight {
+            color: var(--accent);
+            font-weight: bold;
+        }
+        .arrow {
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-top: 10px solid transparent;
+            border-bottom: 10px solid transparent;
+            border-left: 15px solid var(--pointer);
+            z-index: 11;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Code & Database Connection</h1>
+
+        <!-- Section 1: DB Connection -->
+        <div class="section">
+            <h2>1. Establishing the Connection</h2>
+            <p>In <code>backend/server.js</code>, the server establishes a persistent link to the MySQL database.</p>
+            <div class="code-block" style="height: 200px;">
+<pre>
+const db = mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    multipleStatements: true 
+});
+
+db.connect(err => {
+    if (err) console.error('❌ Connection Failed');
+    console.log('✅ Connected to ID: ' + process.env.DB_NAME);
+});
+</pre>
+                <div class="pointer" style="top: 25px; left: 150px; width: 280px; height: 100px;">
+                    <div class="pointer-label">DATABASE CONFIGURATION</div>
+                </div>
+            </div>
+            <div class="explanation">
+                The <span class="highlight">mysql2</span> library is used to create a "bridge" between the server and the data storage.
+            </div>
+        </div>
+
+        <!-- Section 2: The Core Table -->
+        <div class="section">
+            <h2>2. The Scheduling Table Structure</h2>
+            <p>This is how the <code>room_schedules</code> table is structured to connect everything.</p>
+            <div class="code-block">
+<pre>
+CREATE TABLE IF NOT EXISTS room_schedules (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    room_id INT,           // Reference to Rooms
+    course_id INT,         // Reference to Subjects
+    instructor_id INT,     // Reference to Faculty
+    day_of_week VARCHAR(50),
+    start_time TIME,
+    end_time TIME
+);
+</pre>
+                <div class="pointer" style="top: 75px; left: 5px; width: 200px; height: 75px;">
+                    <div class="pointer-label">FOREIGN KEY POINTERS</div>
+                </div>
+            </div>
+            <div class="explanation">
+                Each schedule record "points" to three other pieces of information: a Room, a Subject, and an Instructor.
+            </div>
+        </div>
+
+        <!-- Section 3: Data Saving Logic -->
+        <div class="section">
+            <h2>3. Saving Data (The Connection in Action)</h2>
+            <p>When you click "Save Schedule" in the UI, this code in <code>server.js</code> triggers the database save.</p>
+            <div class="code-block">
+<pre>
+app.post('/api/schedules', (req, res) => {
+    const { room_id, course_id, instructor_id, ...data } = req.body;
+    
+    const sql = "INSERT INTO room_schedules SET ?";
+    
+    db.query(sql, req.body, (err, result) => {
+        if (err) return res.status(500).json(err);
+        res.json({ success: true, id: result.insertId });
+    });
+});
+</pre>
+                <div class="pointer" style="top: 85px; left: 15px; width: 350px; height: 40px;">
+                    <div class="pointer-label">INSERT QUERY</div>
+                </div>
+            </div>
+            <div class="explanation">
+                The server takes your form data and <span class="highlight">Injects</span> it into the MySQL table using a SQL query.
+            </div>
+        </div>
+
+        <!-- Section 4: Final Connection -->
+        <div class="section">
+            <h2 style="color: #fbbf24; border-color: #fbbf24;">4. Frontend Connection</h2>
+            <p>In <code>src/pages/Scheduling.jsx</code>, we use Axios to "talk" to the API.</p>
+            <div class="code-block">
+<pre>
+const response = await axios.post(`${API_BASE_URL}/schedules`, formData, {
+    headers: { 'admin-name': username }
+});
+</pre>
+                <div class="pointer" style="top: 25px; left: 150px; width: 250px; height: 30px;">
+                    <div class="pointer-label">HTTP POST REQUEST</div>
+                </div>
+            </div>
+            <div class="explanation">
+                This is the "Starting Point" of the data's journey to the database!
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple animation to "blink" the pointers
+        setInterval(() => {
+            const pointers = document.querySelectorAll('.pointer');
+            pointers.forEach(p => {
+                p.style.boxShadow = p.style.boxShadow.includes('10px') ? '0 0 20px #f43f5e' : '0 0 10px #f43f5e';
+            });
+        }, 1000);
+    </script>
+</body>
+</html>

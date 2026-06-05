@@ -1,0 +1,344 @@
+/* Login Page Styles - Forest Green Theme */
+.login-wrapper {
+    min-height: 100vh;
+    display: flex;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.branding-panel {
+    flex: 1;
+    background-color: #1a2e05;
+    padding: 48px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+}
+
+.branding-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        radial-gradient(circle at 20% 80%, rgba(132, 204, 22, 0.15) 0%, transparent 25%),
+        radial-gradient(circle at 80% 20%, rgba(251, 191, 36, 0.1) 0%, transparent 25%),
+        radial-gradient(circle at 40% 40%, rgba(220, 38, 38, 0.08) 0%, transparent 20%);
+    pointer-events: none;
+}
+
+.branding-content {
+    position: relative;
+    z-index: 1;
+    max-width: 420px;
+}
+
+.logo-container {
+    margin-bottom: 24px;
+    display: inline-block;
+    padding: 4px;
+    background-color: #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.school-logo {
+    width: 80px;
+    height: auto;
+    object-fit: contain;
+    display: block;
+}
+
+.branding-title {
+    font-size: 48px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -1px;
+    margin-bottom: 8px;
+}
+
+.branding-subtitle {
+    font-size: 16px;
+    color: #84cc16;
+    font-weight: 500;
+    margin-bottom: 20px;
+}
+
+.branding-divider {
+    width: 60px;
+    height: 3px;
+    background-color: #fbbf24;
+    border-radius: 2px;
+    margin-bottom: 20px;
+}
+
+.branding-description {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.6;
+    margin-bottom: 28px;
+}
+
+.feature-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.tag {
+    padding: 6px 14px;
+    background-color: rgba(132, 204, 22, 0.2);
+    border: 1px solid rgba(132, 204, 22, 0.4);
+    border-radius: 20px;
+    font-size: 12px;
+    color: #bef264;
+    font-weight: 500;
+}
+
+.branding-footer {
+    position: relative;
+    z-index: 1;
+    margin-top: auto;
+    padding-top: 32px;
+}
+
+.branding-footer p {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.form-panel {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    background-color: #f8fafc;
+}
+
+.form-container {
+    width: 100%;
+    max-width: 380px;
+}
+
+.form-header {
+    margin-bottom: 32px;
+}
+
+.form-title {
+    font-size: 28px;
+    font-weight: 600;
+    color: #0f172a;
+    margin-bottom: 6px;
+}
+
+.form-subtitle {
+    font-size: 14px;
+    color: #64748b;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.alert {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.alert-warning {
+    background-color: rgba(251, 191, 36, 0.15);
+    color: #b45309;
+    border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.alert-danger {
+    background-color: rgba(220, 38, 38, 0.15);
+    color: #dc2626;
+    border: 1px solid rgba(220, 38, 38, 0.3);
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #475569;
+}
+
+.input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-icon {
+    position: absolute;
+    left: 14px;
+    color: #84cc16;
+}
+
+.form-input {
+    width: 100%;
+    padding: 14px 14px 14px 42px;
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 500;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.form-input::placeholder {
+    color: #94a3b8;
+}
+
+.form-input:focus {
+    border-color: #84cc16;
+    box-shadow: 0 0 0 3px rgba(132, 204, 22, 0.1);
+}
+
+.form-input:disabled {
+    opacity: 0.6;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 14px;
+    background: none;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    display: flex;
+    transition: color 0.2s;
+}
+
+.toggle-password:hover {
+    color: #84cc16;
+}
+
+.submit-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 14px 20px;
+    background-color: #365314;
+    border: 2px solid #84cc16;
+    border-radius: 8px;
+    color: #bef264;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 4px;
+}
+
+.submit-button:hover:not(:disabled) {
+    background-color: #84cc16;
+    color: #1a2e05;
+    box-shadow: 0 4px 12px rgba(132, 204, 22, 0.3);
+}
+
+.submit-button:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.submit-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.submit-button svg {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.2s ease;
+}
+
+.submit-button:hover:not(:disabled) svg {
+    transform: translateX(2px);
+}
+
+.loader {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(190, 242, 100, 0.3);
+    border-top-color: #bef264;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.form-footer {
+    margin-top: 28px;
+    text-align: center;
+}
+
+.security-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+@media (max-width: 1024px) {
+    .login-wrapper {
+        flex-direction: column;
+    }
+
+    .branding-panel {
+        padding: 32px;
+        min-height: auto;
+    }
+
+    .branding-title {
+        font-size: 36px;
+    }
+
+    .branding-description,
+    .feature-tags {
+        display: none;
+    }
+
+    .branding-footer {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .form-panel {
+        padding: 24px;
+    }
+
+    .branding-panel {
+        padding: 24px 20px;
+    }
+
+    .school-logo {
+        width: 70px;
+    }
+
+    .branding-title {
+        font-size: 28px;
+    }
+}
