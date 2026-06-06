@@ -31,6 +31,7 @@ const departmentFullNames = {
 
 const Scheduling = () => {
     const navigate = useNavigate();
+    const userRole = localStorage.getItem('role');
     const [rooms, setRooms] = useState([]);
     const [instructors, setInstructors] = useState([]);
     const [subjects, setSubjects] = useState([]);
@@ -156,6 +157,29 @@ const Scheduling = () => {
             setError('Error deleting schedule');
         } finally {
             setDeletingId(null);
+        }
+    };
+
+    const handleUnassignInstructor = async (schedule) => {
+        if (!window.confirm(`Are you sure you want to remove the instructor from this schedule? This will move the schedule to the Reassign Page.`)) return;
+        const username = localStorage.getItem('username') || 'system';
+        try {
+            const response = await axios.put(`${API_BASE_URL}/schedules/${schedule.id}`, {
+                room_id: schedule.room_id,
+                instructor_id: null,
+                course_id: schedule.course_id,
+                day_of_week: schedule.day_of_week,
+                start_time: schedule.start_time,
+                end_time: schedule.end_time
+            }, { headers: { 'admin-name': username } });
+            
+            if (response.data.success) {
+                setSuccessMessage("Instructor removed. Schedule moved to Reassign Page!");
+                loadInitialData();
+                if (formData.instructor_id) fetchInstructorSchedules(formData.instructor_id);
+            }
+        } catch (err) {
+            setError(err.response?.data?.message || "Error removing instructor from schedule.");
         }
     };
 
@@ -411,31 +435,70 @@ const Scheduling = () => {
                     </div>
                 </div>
             </div>
-
-            <div className="mt-8 bg-white rounded border overflow-hidden">
+            <div className="mt-8 bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
                 <div className="bg-slate-800 p-4 text-white text-center">
-                    <h2 className="font-bold">Full Schedule Overview</h2>
+                    <h2 className="font-bold text-lg">Full Schedule Overview</h2>
                 </div>
-                <div className="p-4">
+                <div className="p-5 bg-slate-50/50">
                     {dayOrder.map(day => {
                         const daySchedules = allSchedules.filter(s => s.day_of_week === day);
                         if (daySchedules.length === 0) return null;
                         return (
-                            <div key={day} className="mb-6">
-                                <h3 className="font-bold border-b mb-2 text-blue-700">{day}</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                            <div key={day} className="mb-8 last:mb-0">
+                                <h3 className="font-bold border-b border-slate-200 pb-2 mb-4 text-blue-700 text-base flex items-center gap-2">
+                                    <Calendar size={18} /> {day}
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {daySchedules.map(s => {
                                         const instructor = instructors.find(i => i.id === s.instructor_id);
-                                        const instructorName = instructor ? `${instructor.first_name} ${instructor.last_name}` : 'No Instructor';
+                                        const instructorName = instructor ? `${instructor.first_name} ${instructor.last_name}` : 'Unassigned / Orphaned';
                                         return (
-                                            <div key={s.id} className="p-2 border rounded text-sm bg-slate-50 flex flex-col justify-between">
+                                            <div key={s.id} className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col justify-between hover:shadow-md transition-shadow relative group">
                                                 <div>
-                                                    <p className="font-medium">{s.subject_description}</p>
-                                                    <p className="text-xs text-slate-600">{formatTime(s.start_time)} | {s.room_name}</p>
+                                                    <div className="flex justify-between items-start gap-2 mb-2">
+                                                        <span className="text-xs font-bold px-2 py-0.5 bg-slate-100 rounded text-slate-700">{s.subject_code}</span>
+                                                        <span className="text-[10px] font-semibold text-slate-400">{s.semester || 'N/A'}</span>
+                                                    </div>
+                                                    <h4 className="font-bold text-slate-800 text-sm mb-2 line-clamp-2" title={s.subject_description}>
+                                                        {s.subject_description}
+                                                    </h4>
+                                                    
+                                                    <div className="space-y-1 text-xs text-slate-500">
+                                                        <p className="flex items-center gap-1.5"><Clock size={12} /> {formatTime(s.start_time)} - {formatTime(s.end_time)}</p>
+                                                        <p className="flex items-center gap-1.5"><MapPin size={12} /> {s.room_name}</p>
+                                                    </div>
                                                 </div>
-                                                <div className="mt-2 text-xs font-semibold text-slate-700 flex items-center gap-1">
-                                                    <User size={12} />
-                                                    {instructorName}
+                                                
+                                                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                                                    <div className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 min-w-0">
+                                                        <User size={12} className="shrink-0 text-slate-400" />
+                                                        <span className={`truncate ${!s.instructor_id ? 'text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100 font-bold' : ''}`}>
+                                                            {instructorName}
+                                                        </span>
+                                                    </div>
+                                                    
+                                                    {userRole === 'super_admin' && (
+                                                        <div className="flex items-center gap-1 shrink-0 ml-2">
+                                                            {s.instructor_id && (
+                                                                <button 
+                                                                    type="button"
+                                                                    onClick={() => handleUnassignInstructor(s)}
+                                                                    className="p-1 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded transition-colors"
+                                                                    title="Unassign Instructor (move to Reassign Page)"
+                                                                >
+                                                                    <User size={14} className="stroke-[2.5]" />
+                                                                </button>
+                                                            )}
+                                                            <button 
+                                                                type="button"
+                                                                onClick={() => handleDeleteSchedule(s.id)}
+                                                                className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                                title="Delete Schedule"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         );
