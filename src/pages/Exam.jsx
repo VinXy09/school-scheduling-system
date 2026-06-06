@@ -1,4 +1,25 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { API_BASE_URL } from '../config';
+import { 
+    Loader2, 
+    ChevronLeft, 
+    Calendar, 
+    Eye, 
+    Printer, 
+    Info, 
+    AlertCircle, 
+    CheckCircle, 
+    X, 
+    BookMarked, 
+    GraduationCap, 
+    Save, 
+    User, 
+    Clock, 
+    Trash2 
+} from 'lucide-react';
+
 const API = API_BASE_URL;
 
 const EXAM_QUARTERS = [
