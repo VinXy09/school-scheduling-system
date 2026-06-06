@@ -75,7 +75,7 @@ function App() {
                   setAuth={setIsAuthenticated}
                 />
                  
-                <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-20'}`}> 
+                <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-56' : 'ml-16'}`}> 
                   <div className="sticky top-0 z-40 bg-white dark:bg-dark-card border-b border-slate-100 dark:border-dark-border px-8 py-4 flex items-center justify-between">
                     <div></div>
                     <GlobalSearch />
