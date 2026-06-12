@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
 import { UserPlus, Save, ArrowLeft, Home, ChevronRight, Calendar } from 'lucide-react';
+import AvatarSelector from '../components/AvatarSelector';
 
 const AddInstructor = () => {
   const navigate = useNavigate();
@@ -11,7 +12,9 @@ const AddInstructor = () => {
     street_address: '', barangay: '', municipality_city: '', province: '',
     gender: '', contact_number: '', cellphone_number: '',
     college: '', department: '', employee_status: '', specialization: '', is_available: 1,
-    availability: []
+    availability: [],
+    avatar_type: 'avatar',
+    avatar_data: ''
   });
 
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -33,22 +36,44 @@ const AddInstructor = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (formData.availability.length === 0) {
-        alert("Please select at least one day of availability.");
-        return;
+      alert("Please select at least one day of availability.");
+      return;
     }
 
     const username = localStorage.getItem('username') || 'system';
     try {
-      const response = await axios.post(`${API_BASE_URL}/instructors`, formData, {
-        headers: { 'admin-name': username }
-      });
-      if (response.data.success) {
-        alert("Instructor Registered Successfully!");
-        navigate('/instructors');
+      let response;
+      try {
+        response = await axios.post(`${API_BASE_URL}/instructors`, formData, { headers: { 'admin-name': username } });
+        if (response.data.success) {
+          alert("Instructor Registered Successfully!");
+          navigate('/instructors');
+        }
+      } catch (err) {
+        console.error('Create instructor error:', err.response?.status, err.response?.data, err.message);
+        const serverMsg = err.response?.data?.message || (typeof err.response?.data === 'string' ? err.response.data : err.message);
+        if (typeof serverMsg === 'string' && serverMsg.includes('Unknown column') && serverMsg.includes('avatar_type')) {
+          // Retry without avatar fields
+          const payloadNoAvatar = { ...formData };
+          delete payloadNoAvatar.avatar_type;
+          delete payloadNoAvatar.avatar_data;
+          try {
+            response = await axios.post(`${API_BASE_URL}/instructors`, payloadNoAvatar, { headers: { 'admin-name': username } });
+            if (response.data.success) {
+              alert("Instructor Registered Successfully!");
+              navigate('/instructors');
+            }
+          } catch (err2) {
+            console.error('Retry without avatar failed:', err2.response?.status, err2.response?.data, err2.message);
+            alert("Error saving instructor. Check console/network response.");
+          }
+        } else {
+          alert("Error saving instructor. Check if ID Number or Email already exists.");
+        }
       }
     } catch (err) {
-      console.error(err);
-      alert("Error saving instructor. Check if ID Number or Email already exists.");
+      console.error('Unexpected error creating instructor:', err);
+      alert('Unexpected error saving instructor. Check console for details.');
     }
   };
 
@@ -61,7 +86,7 @@ const AddInstructor = () => {
             <ArrowLeft size={18} />
           </button>
           <h1 className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-             <UserPlus className="text-slate-600" /> Add New Instructor
+            <UserPlus className="text-slate-600" /> Add New Instructor
           </h1>
         </div>
         <div className="flex items-center gap-2 text-xs text-slate-500">
@@ -70,6 +95,14 @@ const AddInstructor = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5 max-w-5xl mx-auto pb-10">
+        {/* Profile Avatar/Photo Section */}
+        <AvatarSelector
+          avatarType={formData.avatar_type}
+          avatarData={formData.avatar_data}
+          gender={formData.gender}
+          onChange={({ avatar_type, avatar_data }) => setFormData({ ...formData, avatar_type, avatar_data })}
+        />
+
         {/* Personal Information Section */}
         <div className="bg-white rounded-md shadow-sm border border-slate-200 overflow-hidden">
           <div className="bg-slate-50 px-5 py-3 border-b border-slate-200">
@@ -138,7 +171,7 @@ const AddInstructor = () => {
         <div className="bg-white rounded-md shadow-sm border border-slate-200 overflow-hidden">
           <div className="bg-slate-50 px-5 py-3 border-b border-slate-200">
             <h2 className="font-semibold text-slate-700 text-sm flex items-center gap-2">
-                <Calendar size={16} className="text-slate-500" /> Weekly Schedule Availability
+              <Calendar size={16} className="text-slate-500" /> Weekly Schedule Availability
             </h2>
           </div>
           <div className="p-5">
@@ -149,11 +182,10 @@ const AddInstructor = () => {
                   key={day}
                   type="button"
                   onClick={() => handleDayChange(day)}
-                  className={`py-2.5 px-3 rounded border text-xs font-medium transition-all flex flex-col items-center gap-1.5 ${
-                    formData.availability.includes(day)
+                  className={`py-2.5 px-3 rounded border text-xs font-medium transition-all flex flex-col items-center gap-1.5 ${formData.availability.includes(day)
                       ? 'border-blue-600 bg-blue-50 text-blue-700'
                       : 'border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300'
-                  }`}
+                    }`}
                 >
                   <span className={`w-2.5 h-2.5 rounded-full ${formData.availability.includes(day) ? 'bg-blue-600' : 'bg-slate-300'}`}></span>
                   {day.substring(0, 3)}
@@ -161,7 +193,7 @@ const AddInstructor = () => {
               ))}
             </div>
             <p className="text-xs text-slate-400 mt-3">
-                * The scheduling system will forbid assignments on days not selected here.
+              * The scheduling system will forbid assignments on days not selected here.
             </p>
           </div>
         </div>
@@ -219,19 +251,19 @@ const AddInstructor = () => {
         </div>
 
         <div className="flex justify-end gap-3">
-            <button 
-              type="button" 
-              onClick={() => navigate('/instructors')}
-              className="px-5 py-2.5 border border-slate-300 text-slate-600 font-medium rounded hover:bg-slate-50 transition-all"
-            >
-              Cancel
-            </button>
-            <button 
-              type="submit" 
-              className="bg-slate-800 text-white px-6 py-2.5 rounded font-medium hover:bg-slate-900 transition-all flex items-center gap-2"
-            >
-              <Save size={16} /> Save Instructor
-            </button>
+          <button
+            type="button"
+            onClick={() => navigate('/instructors')}
+            className="px-5 py-2.5 border border-slate-300 text-slate-600 font-medium rounded hover:bg-slate-50 transition-all"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="bg-slate-800 text-white px-6 py-2.5 rounded font-medium hover:bg-slate-900 transition-all flex items-center gap-2"
+          >
+            <Save size={16} /> Save Instructor
+          </button>
         </div>
       </form>
     </div>

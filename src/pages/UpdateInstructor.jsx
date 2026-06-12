@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
 import { Save, ArrowLeft, Home, ChevronRight, Calendar } from 'lucide-react';
+import AvatarSelector from '../components/AvatarSelector';
 
 const UpdateInstructor = () => {
   const { id } = useParams();
@@ -12,14 +13,20 @@ const UpdateInstructor = () => {
     street_address: '', barangay: '', municipality_city: '', province: '',
     gender: '', contact_number: '', cellphone_number: '',
     college: '', department: '', employee_status: '', specialization: '', is_available: 1,
-    availability: []
+    availability: [],
+    avatar_type: 'avatar',
+    avatar_data: ''
   });
+  const [hasAvatarColumns, setHasAvatarColumns] = useState(false);
 
   useEffect(() => {
     const fetchInstructor = async () => {
       try {
         const res = await axios.get(`${API_BASE_URL}/instructors/${id}`);
         setFormData(res.data);
+        // Detect whether backend includes avatar columns to avoid sending unsupported fields
+        const hasAvatar = Object.prototype.hasOwnProperty.call(res.data, 'avatar_type') || Object.prototype.hasOwnProperty.call(res.data, 'avatar_data');
+        setHasAvatarColumns(Boolean(hasAvatar));
       } catch (err) { console.error(err); }
     };
     fetchInstructor();
@@ -43,11 +50,85 @@ const UpdateInstructor = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Only send fields the backend expects.
+    // Backend does: const { availability, ...instructorData } = req.body;
+    // and updates using: UPDATE instructors SET ? WHERE id = ?
+    // So sending unknown keys can trigger MySQL errors.
+    const payload = {
+      id_number: formData.id_number,
+      email: formData.email,
+      first_name: formData.first_name,
+      middle_name: formData.middle_name,
+      last_name: formData.last_name,
+      extension_name: formData.extension_name,
+
+      street_address: formData.street_address,
+      barangay: formData.barangay,
+      municipality_city: formData.municipality_city,
+      province: formData.province,
+
+      gender: formData.gender,
+      contact_number: formData.contact_number,
+      cellphone_number: formData.cellphone_number,
+
+      college: formData.college,
+      department: formData.department,
+      employee_status: formData.employee_status,
+      specialization: formData.specialization,
+
+      // backend may store as int/tinyint; keep as 0/1
+      is_available: Number(formData.is_available) === 1 ? 1 : 0,
+
+      // Only send avatar fields when the backend actually supports them.
+      ...(hasAvatarColumns && formData.avatar_type !== undefined ? { avatar_type: formData.avatar_type } : {}),
+      ...(hasAvatarColumns && formData.avatar_data !== undefined ? { avatar_data: formData.avatar_data } : {}),
+
+
+      availability: Array.isArray(formData.availability) ? formData.availability : []
+    };
+
     try {
-      await axios.put(`${API_BASE_URL}/instructors/${id}`, formData);
+      console.log('PUT payload', payload);
+      let response;
+      try {
+        response = await axios.put(`${API_BASE_URL}/instructors/${id}`, payload);
+        console.log('Update response', response.data);
+      } catch (err) {
+        console.error('Update instructor error:', err.response?.status, err.response?.data, err.message);
+        const serverMsg = err.response?.data?.message || (typeof err.response?.data === 'string' ? err.response.data : err.message);
+        // If backend complains about missing avatar columns, retry without avatar fields
+        if (typeof serverMsg === 'string' && serverMsg.includes('Unknown column') && serverMsg.includes('avatar_type')) {
+          const payloadNoAvatar = { ...payload };
+          delete payloadNoAvatar.avatar_type;
+          delete payloadNoAvatar.avatar_data;
+          try {
+            response = await axios.put(`${API_BASE_URL}/instructors/${id}`, payloadNoAvatar);
+            console.log('Update response (without avatar fields)', response.data);
+          } catch (err2) {
+            console.error('Retry without avatar fields failed', err2.response?.status, err2.response?.data, err2.message);
+            const msg2 = err2.response?.data?.message || (typeof err2.response?.data === 'string' ? err2.response.data : err2.message);
+            alert(`Error updating instructor: ${typeof msg2 === 'string' ? msg2 : 'Check console/network response.'}`);
+            return;
+          }
+        } else {
+          alert(`Error updating instructor: ${typeof serverMsg === 'string' ? serverMsg : 'Check console/network response.'}`);
+          return;
+        }
+      }
+
+      // Save avatar locally so directory reflects changes immediately even if backend doesn't persist yet
+      try {
+        const localKey = `instructor-avatar-${id}`;
+        const avatarToStore = { avatar_type: formData.avatar_type, avatar_data: formData.avatar_data };
+        localStorage.setItem(localKey, JSON.stringify(avatarToStore));
+      } catch (e) { /* ignore storage errors */ }
       alert("Instructor updated successfully!");
       navigate('/instructors');
-    } catch (err) { alert("Error updating instructor."); }
+    } catch (err) {
+      console.error('Unexpected error updating instructor:', err);
+      alert('Unexpected error updating instructor. Check console for details.');
+    }
   };
 
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -65,6 +146,14 @@ const UpdateInstructor = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5 max-w-5xl mx-auto pb-10">
+        {/* Profile Avatar/Photo Section */}
+        <AvatarSelector
+          avatarType={formData.avatar_type}
+          avatarData={formData.avatar_data}
+          gender={formData.gender}
+          onChange={({ avatar_type, avatar_data }) => setFormData({ ...formData, avatar_type, avatar_data })}
+        />
+
         {/* Personal Information Section */}
         <div className="bg-white rounded-md shadow-sm border border-slate-200 overflow-hidden">
           <div className="bg-slate-50 px-5 py-3 border-b border-slate-200 flex justify-between items-center">

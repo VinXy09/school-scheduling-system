@@ -69,9 +69,27 @@ const ViewInstructors = () => {
   const userRole = rawRole ? rawRole.toLowerCase() : '';
   const isSuperAdmin = userRole === 'super_admin';
 
-  // Function to get avatar based on gender
-  const getAvatar = (gender) => {
-    if (gender === 'Female') {
+  // Function to get avatar based on database record or gender
+  const getAvatar = (instructor) => {
+    if (!instructor) return 'avatar.png';
+    try {
+      const localKey = `instructor-avatar-${instructor.id}`;
+      const stored = localStorage.getItem(localKey);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.avatar_type === 'image' && parsed?.avatar_data) return parsed.avatar_data;
+        if (parsed?.avatar_type === 'avatar' && parsed?.avatar_data) return `/${parsed.avatar_data}`;
+      }
+    } catch (e) {
+      // ignore localStorage errors and fall back to server data
+    }
+    if (instructor.avatar_type === 'image' && instructor.avatar_data) {
+      return instructor.avatar_data;
+    }
+    if (instructor.avatar_type === 'avatar' && instructor.avatar_data) {
+      return `/${instructor.avatar_data}`;
+    }
+    if (instructor.gender === 'Female') {
       return 'avatar3.png';
     }
     return 'avatar.png';
@@ -285,14 +303,24 @@ const ViewInstructors = () => {
           <tbody className="divide-y divide-slate-100">
             {filtered.map((ins) => (
               <tr key={ins.id} className="hover:bg-slate-50 transition-colors">
-                <td className="p-4">
-                  <button 
-                    onClick={() => handleViewInstructor(ins)}
-                    className="font-medium text-slate-800 hover:text-blue-600 hover:underline text-left"
-                  >
-                    {ins.last_name}, {ins.first_name}
-                  </button>
-                  <div className="text-xs text-blue-600 font-medium">{ins.id_number}</div>
+                <td className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 bg-slate-50 flex-shrink-0">
+                    <img 
+                      src={getAvatar(ins)} 
+                      alt="avatar" 
+                      className="w-full h-full object-cover"
+                      onError={(e) => { e.target.src = ins.gender === 'Female' ? 'avatar3.png' : 'avatar.png'; }}
+                    />
+                  </div>
+                  <div>
+                    <button 
+                      onClick={() => handleViewInstructor(ins)}
+                      className="font-medium text-slate-800 hover:text-blue-600 hover:underline text-left block"
+                    >
+                      {ins.last_name}, {ins.first_name}
+                    </button>
+                    <div className="text-xs text-blue-600 font-medium">{ins.id_number}</div>
+                  </div>
                 </td>
                 <td className="p-4">
                   <div className="text-xs flex items-center gap-2 text-slate-600 mb-1"><Mail size={12}/> {ins.email}</div>
@@ -353,9 +381,10 @@ const ViewInstructors = () => {
                 <div className="flex flex-col items-center">
                   <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-slate-200 mb-4">
                     <img 
-                      src={getAvatar(selectedInstructor.gender)} 
+                      src={getAvatar(selectedInstructor)} 
                       alt="Professor Avatar"
                       className="w-full h-full object-cover"
+                      onError={(e) => { e.target.src = selectedInstructor.gender === 'Female' ? 'avatar3.png' : 'avatar.png'; }}
                     />
                   </div>
                   <h3 className="text-xl font-bold text-slate-800 text-center">

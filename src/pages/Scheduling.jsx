@@ -29,6 +29,25 @@ const departmentFullNames = {
     'BA': 'Business Administration'
 };
 
+const normalizeYear = (yr) => {
+    if (!yr) return '';
+    const y = yr.toLowerCase();
+    if (y.includes('1st')) return '1st';
+    if (y.includes('2nd')) return '2nd';
+    if (y.includes('3rd')) return '3rd';
+    if (y.includes('4th')) return '4th';
+    return y;
+};
+
+const normalizeSemester = (sem) => {
+    if (!sem) return '';
+    const s = sem.toLowerCase();
+    if (s.includes('1st')) return '1st';
+    if (s.includes('2nd')) return '2nd';
+    if (s.includes('3rd')) return '3rd';
+    return s;
+};
+
 const Scheduling = () => {
     const navigate = useNavigate();
     const userRole = localStorage.getItem('role');
@@ -43,6 +62,7 @@ const Scheduling = () => {
     const [loadingSchedules, setLoadingSchedules] = useState(false);
     const [conflict, setConflict] = useState(null);
     const [checkingConflict, setCheckingConflict] = useState(false);
+    const [warnings, setWarnings] = useState([]);
     const [successMessage, setSuccessMessage] = useState('');
 
     const [formData, setFormData] = useState({
@@ -57,6 +77,13 @@ const Scheduling = () => {
     const [editLoading, setEditLoading] = useState(false);
     const [editError, setEditError] = useState('');
     const [deletingId, setDeletingId] = useState(null);
+
+    const selectedInstructor = instructors.find(i => String(i.id) === String(formData.instructor_id));
+    const isSena = selectedInstructor?.first_name?.toLowerCase().includes("mark") && 
+                   selectedInstructor?.last_name?.toLowerCase().includes("sena");
+    const instructorAvailability = selectedInstructor?.availability || [];
+    const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const availableDays = instructorAvailability.length > 0 ? dayOrder.filter(d => instructorAvailability.includes(d)) : dayOrder;
 
     const loadInitialData = async () => {
         try {
@@ -193,6 +220,7 @@ const Scheduling = () => {
         const checkConflicts = () => {
             if (!formData.instructor_id || !formData.room_id || !formData.day_of_week || !formData.start_time || !formData.end_time) {
                 setConflict(null);
+                setWarnings([]);
                 return;
             }
 
@@ -202,6 +230,11 @@ const Scheduling = () => {
             const newRoomId = parseInt(formData.room_id);
             const newInstId = parseInt(formData.instructor_id);
 
+            const selectedSubject = subjects.find(sub => String(sub.id) === String(formData.course_id));
+            const selectedYear = selectedSubject ? normalizeYear(selectedSubject.year_level) : '';
+            const selectedSem = selectedSubject ? normalizeSemester(formData.semester || selectedSubject.semester) : '';
+
+            // Check hard conflicts (overlapping times)
             const foundConflict = allSchedules.find(s => {
                 if (s.day_of_week !== newDay) return false;
                 const sStart = timeToMinutes(s.start_time);
@@ -216,14 +249,56 @@ const Scheduling = () => {
                     setConflict({ type: 'room', schedule: s, message: 'Room is already booked at this time.' });
                     return true;
                 }
+
+                // Student year group time-overlap hard conflict
+                const otherYear = normalizeYear(s.year_level);
+                const otherSem = normalizeSemester(s.semester);
+                if (hasTimeOverlap && selectedYear && otherYear && selectedYear === otherYear && selectedSem === otherSem) {
+                    const otherInstName = s.instructor_name || 'Another Instructor';
+                    setConflict({
+                        type: 'student_year',
+                        schedule: s,
+                        message: `Student year group (${s.year_level}) is already scheduled for ${s.subject_code} with ${otherInstName} at this time.`
+                    });
+                    return true;
+                }
                 return false;
             });
 
-            if (!foundConflict) setConflict(null);
+            if (!foundConflict) {
+                setConflict(null);
+
+                // Find same-day soft warnings (different instructor, non-overlapping same student year cohort)
+                const newWarnings = [];
+                const currentInstName = selectedInstructor ? `${selectedInstructor.first_name} ${selectedInstructor.last_name}` : 'Current Instructor';
+
+                allSchedules.forEach(s => {
+                    if (s.day_of_week === newDay && s.instructor_id !== newInstId) {
+                        const otherYear = normalizeYear(s.year_level);
+                        const otherSem = normalizeSemester(s.semester);
+                        
+                        if (selectedYear && otherYear && selectedYear === otherYear && selectedSem === otherSem) {
+                            const otherInstName = s.instructor_name || 'Another Instructor';
+                            newWarnings.push({
+                                id: s.id,
+                                instructorName: otherInstName,
+                                subjectCode: s.subject_code,
+                                subjectDesc: s.subject_description,
+                                time: `${formatTime(s.start_time)} - ${formatTime(s.end_time)}`,
+                                yearLevel: s.year_level,
+                                message: `${currentInstName} and ${otherInstName} have the same student year group (${s.year_level}) scheduled on ${newDay}.`
+                            });
+                        }
+                    }
+                });
+                setWarnings(newWarnings);
+            } else {
+                setWarnings([]);
+            }
         };
 
         checkConflicts();
-    }, [formData, allSchedules]);
+    }, [formData, allSchedules, subjects, selectedInstructor]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -236,6 +311,7 @@ const Scheduling = () => {
             if (response.data.success) {
                 setSuccessMessage("Schedule Saved Successfully!");
                 setFormData({ room_id: '', instructor_id: '', course_id: '', semester: '', day_of_week: '', start_time: '', end_time: '' });
+                setWarnings([]);
                 loadInitialData();
             }
         } catch (err) {
@@ -243,21 +319,35 @@ const Scheduling = () => {
         }
     };
 
-    const selectedInstructor = instructors.find(i => i.id === parseInt(formData.instructor_id));
-    const isSena = selectedInstructor?.first_name?.toLowerCase().includes("mark") && 
-                   selectedInstructor?.last_name?.toLowerCase().includes("sena");
-    const instructorAvailability = selectedInstructor?.availability || [];
-    const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const availableDays = instructorAvailability.length > 0 ? dayOrder.filter(d => instructorAvailability.includes(d)) : dayOrder;
+    const getAvatar = (instructor) => {
+        if (!instructor) return 'avatar.png';
+        if (instructor.avatar_type === 'image' && instructor.avatar_data) {
+            return instructor.avatar_data;
+        }
+        if (instructor.avatar_type === 'avatar' && instructor.avatar_data) {
+            return `/${instructor.avatar_data}`;
+        }
+        return instructor.gender === 'Female' ? 'avatar3.png' : 'avatar.png';
+    };
 
     // Filter subjects based on instructor department/college
     const filteredSubjects = React.useMemo(() => {
-        if (!formData.instructor_id || !selectedInstructor) return subjects;
+            if (!formData.instructor_id || !selectedInstructor) return subjects;
 
-        const dept = selectedInstructor.department;
-        const college = selectedInstructor.college;
+            const dept = selectedInstructor.department;
+            const college = selectedInstructor.college;
 
-        return subjects.filter(s => {
+            // Normalize dept/college: stored values might be full names instead of codes.
+            const deptCode = dept && Object.keys(departmentFullNames).find(k => departmentFullNames[k].toLowerCase() === String(dept).toLowerCase()) || dept;
+            const collegeCode = college && Object.keys(collegeFullNames).find(k => collegeFullNames[k].toLowerCase() === String(college).toLowerCase()) || college;
+
+            // If instructor record lacks department and college information, don't filter — show all subjects.
+            if (!deptCode && !collegeCode) return subjects;
+
+        console.debug('Scheduling: selectedInstructor for filtering:', selectedInstructor);
+        console.debug('Scheduling: normalized deptCode, collegeCode:', deptCode, collegeCode);
+
+        const result = subjects.filter(s => {
             if (!s.major_subject) return true; // General subjects?
             
             const majorList = s.major_subject.split(',').map(m => m.trim().toUpperCase());
@@ -277,6 +367,9 @@ const Scheduling = () => {
 
             return false;
         });
+
+        console.debug('Scheduling: filteredSubjects count:', result.length, result.slice(0,6));
+        return result;
     }, [formData.instructor_id, subjects, selectedInstructor]);
 
     const formatTime = (timeStr) => {
@@ -398,6 +491,31 @@ const Scheduling = () => {
                             <input type="time" required className="p-2.5 bg-slate-50 border rounded text-sm" value={formData.start_time} onChange={e => setFormData({...formData, start_time: e.target.value})} />
                             <input type="time" required className="p-2.5 bg-slate-50 border rounded text-sm" value={formData.end_time} onChange={e => setFormData({...formData, end_time: e.target.value})} />
                         </div>
+                        {warnings.length > 0 && (
+                            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg shadow-sm">
+                                <div className="flex items-start gap-3">
+                                    <Info className="text-amber-600 mt-0.5" size={20} />
+                                    <div className="flex-1">
+                                        <h3 className="font-semibold text-amber-800 text-sm">Student Year Schedule Alert</h3>
+                                        <div className="mt-2 space-y-2">
+                                            {warnings.map((warn, index) => (
+                                                <div key={index} className="text-xs text-amber-700">
+                                                    <p className="font-medium">{warn.message}</p>
+                                                    <div className="mt-1 bg-white/60 p-2 text-[10px] rounded border border-amber-100 flex justify-between items-center">
+                                                        <span>
+                                                            <strong>{warn.subjectCode}</strong> ({warn.subjectDesc}) | {warn.time}
+                                                        </span>
+                                                        <span className="font-bold text-amber-800">
+                                                            {warn.instructorName}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                         <button type="submit" disabled={!!conflict} className={`w-full py-3 rounded font-medium text-white ${conflict ? 'bg-slate-400' : 'bg-slate-800 hover:bg-slate-900'}`}>
                             <Save size={18} className="inline mr-2"/> {conflict ? 'Conflict Detected' : 'Finalize Schedule'}
                         </button>
@@ -410,7 +528,12 @@ const Scheduling = () => {
                         {selectedInstructor ? (
                             <div className="space-y-4">
                                 <div className="flex items-center gap-3 bg-slate-50 p-3 rounded">
-                                    <img src={selectedInstructor.gender === 'Female' ? 'avatar3.png' : 'avatar.png'} className="w-10 h-10 rounded-full" alt="avatar" />
+                                    <img 
+                                        src={getAvatar(selectedInstructor)} 
+                                        className="w-10 h-10 rounded-full object-cover shadow-inner" 
+                                        alt="avatar" 
+                                        onError={(e) => { e.target.src = selectedInstructor.gender === 'Female' ? 'avatar3.png' : 'avatar.png'; }}
+                                    />
                                     <div>
                                         <p className="text-sm font-bold">{selectedInstructor.first_name} {selectedInstructor.last_name}</p>
                                         <p className="text-xs text-slate-500">{selectedInstructor.id_number}</p>
