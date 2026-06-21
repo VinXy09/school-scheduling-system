@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL } from '../../config';
 import { ShieldCheck, UserPlus, Trash2, ShieldAlert, Loader2, KeyRound, Eye, EyeOff } from 'lucide-react';
 
 const ManageAdmins = () => {

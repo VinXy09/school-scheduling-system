@@ -3,18 +3,18 @@ import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import Sidebar from './components/Sidebar';
 import GlobalSearch from './components/GlobalSearch';
 import Dashboard from './pages/Dashboard';
-import ViewInstructors from './pages/ViewInstructors'; 
-import AddInstructor from './pages/AddInstructors'; 
-import UpdateInstructor from './pages/UpdateInstructor'; 
+import ViewInstructors from './pages/instructors/ViewInstructors'; 
+import AddInstructor from './pages/instructors/AddInstructors'; 
+import UpdateInstructor from './pages/instructors/UpdateInstructor'; 
 import Rooms from './pages/Rooms';
-import ManageAdmins from './pages/ManageAdmins';
+import ManageAdmins from './pages/admin/ManageAdmins';
 import Login from './pages/Login';
 import Courses from './pages/Courses';
-import Curriculum from './pages/Curriculum';
-import AddCurriculum from './pages/AddCurriculum'; 
-import CurriculumDetails from './pages/CurriculumDetails';
-import Scheduling from './pages/Scheduling'; 
-import ReassignSchedule from './pages/ReassignSchedule';
+import Curriculum from './pages/curriculum/Curriculum';
+import AddCurriculum from './pages/curriculum/AddCurriculum'; 
+import CurriculumDetails from './pages/curriculum/CurriculumDetails';
+import Scheduling from './pages/curriculum/Scheduling'; 
+import ReassignSchedule from './pages/curriculum/ReassignSchedule';
 import Exam from './pages/Exam';
 import Reports from './pages/Reports';
 import Profile from './pages/Profile';
@@ -43,10 +43,6 @@ function App() {
   const userRole = localStorage.getItem('role');
 
   const [isAppLoading, setIsAppLoading] = useState(true);
-
-  useEffect(() => {
-    localStorage.removeItem('isAuthenticated');
-  }, []);
 
   if (isAppLoading) {
     return <SplashLoading onComplete={() => setIsAppLoading(false)} />;

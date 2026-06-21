@@ -98,10 +98,10 @@ const Calendar = () => {
     const dateStr = date.toISOString().split('T')[0];
     const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
     
-    const daySchedules = schedules.filter(s => s.day_of_week === dayName);
+    const daySchedules = schedules.filter(s => s.day_of_week === dayName && s.semester === semester);
     const dayExams = exams.filter(e => {
       const examDate = new Date(e.exam_date).toISOString().split('T')[0];
-      return examDate === dateStr;
+      return examDate === dateStr && e.semester === semester;
     });
     
     return { schedules: daySchedules, exams: dayExams };
@@ -115,6 +115,7 @@ const Calendar = () => {
     
     const daySchedules = schedules.filter(s => {
       if (s.day_of_week !== dayName) return false;
+      if (s.semester !== semester) return false;
       const scheduleHour = parseInt(s.start_time.split(':')[0]);
       return scheduleHour === hour;
     });
@@ -122,6 +123,7 @@ const Calendar = () => {
     const dayExams = exams.filter(e => {
       const examDate = new Date(e.exam_date).toISOString().split('T')[0];
       if (examDate !== dateStr) return false;
+      if (e.semester !== semester) return false;
       const examHour = parseInt(e.start_time.split(':')[0]);
       return examHour === hour;
     });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Info } from 'lucide-react';
 
 const CustomModal = ({ 
   isOpen, 
@@ -37,7 +37,7 @@ const CustomModal = ({
       >
         <div className="p-6">
           <div className="flex items-start gap-4">
-            <div className={`p-3 rounded-full bg-${themeColor}-50 shrink-0`}>
+            <div className={`p-3 rounded-full shrink-0 ${themeColor === 'blue' ? 'bg-blue-50' : themeColor === 'amber' ? 'bg-amber-50' : themeColor === 'red' ? 'bg-red-50' : 'bg-emerald-50'}`}>
               {icons[type]}
             </div>
             <div className="flex-1">

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL } from '../../config';
 import { Save, ArrowLeft, Home, ChevronRight, Calendar } from 'lucide-react';
-import AvatarSelector from '../components/AvatarSelector';
+import AvatarSelector from '../../components/AvatarSelector';
 
 const UpdateInstructor = () => {
   const { id } = useParams();
@@ -89,13 +89,10 @@ const UpdateInstructor = () => {
     };
 
     try {
-      console.log('PUT payload', payload);
       let response;
       try {
         response = await axios.put(`${API_BASE_URL}/instructors/${id}`, payload);
-        console.log('Update response', response.data);
       } catch (err) {
-        console.error('Update instructor error:', err.response?.status, err.response?.data, err.message);
         const serverMsg = err.response?.data?.message || (typeof err.response?.data === 'string' ? err.response.data : err.message);
         // If backend complains about missing avatar columns, retry without avatar fields
         if (typeof serverMsg === 'string' && serverMsg.includes('Unknown column') && serverMsg.includes('avatar_type')) {
@@ -104,9 +101,7 @@ const UpdateInstructor = () => {
           delete payloadNoAvatar.avatar_data;
           try {
             response = await axios.put(`${API_BASE_URL}/instructors/${id}`, payloadNoAvatar);
-            console.log('Update response (without avatar fields)', response.data);
           } catch (err2) {
-            console.error('Retry without avatar fields failed', err2.response?.status, err2.response?.data, err2.message);
             const msg2 = err2.response?.data?.message || (typeof err2.response?.data === 'string' ? err2.response.data : err2.message);
             alert(`Error updating instructor: ${typeof msg2 === 'string' ? msg2 : 'Check console/network response.'}`);
             return;
@@ -332,4 +327,3 @@ const UpdateInstructor = () => {
 };
 
 export default UpdateInstructor;
-

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Save, AlertCircle, Loader2, Calendar, Clock, MapPin, X, User, BookOpen } from 'lucide-react';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL } from '../../config';
 
 const ReassignSchedule = () => {
     const [schedules, setSchedules] = useState([]);

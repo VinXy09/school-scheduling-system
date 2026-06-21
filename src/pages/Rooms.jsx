@@ -45,7 +45,6 @@ const Rooms = () => {
 
     const handleAddRoom = async (e) => {
     e.preventDefault();
-    console.log("Sending to server:", newRoom);
     const username = localStorage.getItem('username') || 'system';
     try {
         const res = await axios.post(`${API_BASE_URL}/rooms`, newRoom, {

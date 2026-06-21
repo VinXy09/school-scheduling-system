@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL } from '../../config';
 import { UserPlus, Save, ArrowLeft, Home, ChevronRight, Calendar } from 'lucide-react';
-import AvatarSelector from '../components/AvatarSelector';
+import AvatarSelector from '../../components/AvatarSelector';
 
 const AddInstructor = () => {
   const navigate = useNavigate();
@@ -271,4 +271,3 @@ const AddInstructor = () => {
 };
 
 export default AddInstructor;
-

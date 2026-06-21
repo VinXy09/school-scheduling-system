@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Plus, ArrowLeft, BookOpen, Loader2 } from 'lucide-react';
 import axios from 'axios';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL } from '../../config';
 
 const CurriculumDetails = () => {
   const { majorCode } = useParams();
@@ -106,14 +106,20 @@ const CurriculumDetails = () => {
                              <div key={sub.id} className="p-4 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
                                <div className="flex justify-between items-start mb-2">
                                  <span className="font-black text-blue-700">{sub.subject_code}</span>
-                                 <span className={`px-2 py-0.5 text-[9px] font-bold uppercase rounded border ${
-                                    sub.is_lab === 1 ? 'bg-purple-50 text-purple-600 border-purple-200' : 
-                                    sub.is_lab === 2 ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 
-                                    sub.is_lab === 3 ? 'bg-orange-50 text-orange-600 border-orange-200' :
-                                    'bg-blue-50 text-blue-600 border-blue-200'
-                                 }`}>
-                                   {sub.is_lab === 1 ? 'Laboratory' : sub.is_lab === 2 ? 'Gymnasium' : sub.is_lab === 3 ? 'OJT' : 'Lecture'}
-                                 </span>
+                                  <span className={`px-2 py-0.5 text-[9px] font-bold uppercase rounded border ${
+                                     sub.is_thesis && sub.is_feasibility ? 'bg-pink-50 text-pink-600 border-pink-200' :
+                                     sub.is_thesis ? 'bg-rose-50 text-rose-600 border-rose-200' :
+                                     sub.is_feasibility ? 'bg-cyan-50 text-cyan-600 border-cyan-200' :
+                                     sub.is_lab === 1 ? 'bg-purple-50 text-purple-600 border-purple-200' : 
+                                     sub.is_lab === 2 ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 
+                                     sub.is_lab === 3 ? 'bg-orange-50 text-orange-600 border-orange-200' :
+                                     'bg-blue-50 text-blue-600 border-blue-200'
+                                  }`}>
+                                    {sub.is_thesis && sub.is_feasibility ? 'Thesis / Feasibility' :
+                                     sub.is_thesis ? 'Thesis' :
+                                     sub.is_feasibility ? 'Feasibility (Feasib)' :
+                                     sub.is_lab === 1 ? 'Laboratory' : sub.is_lab === 2 ? 'Gymnasium' : sub.is_lab === 3 ? 'OJT' : 'Lecture'}
+                                  </span>
                                </div>
                                <p className="text-sm font-medium text-slate-700 leading-snug mb-3">
                                  {sub.subject_description}

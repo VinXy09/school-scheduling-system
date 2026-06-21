@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { UserPlus, Edit, Search, Mail, Phone, Home, ChevronRight, Trash2, X, Calendar, MapPin, User, BookOpen, RotateCw, AlertCircle } from 'lucide-react';
-import CustomModal from '../components/CustomModal';
-import { API_BASE_URL } from '../config';
+import CustomModal from '../../components/CustomModal';
+import { API_BASE_URL } from '../../config';
 
 
 // Mapping for full department/college names
@@ -542,4 +542,3 @@ const ViewInstructors = () => {
 };
 
 export default ViewInstructors;
-

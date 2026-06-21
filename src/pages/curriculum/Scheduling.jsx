@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Save, ChevronLeft, AlertCircle, Loader2, Info, User, Calendar, Clock, MapPin, X, Mail, Phone, Pencil, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL } from '../../config';
 
 const collegeFullNames = {
     'CCS': 'College of Computer Studies',
@@ -48,6 +48,26 @@ const normalizeSemester = (sem) => {
     return s;
 };
 
+const bsbaMajors = [
+    { code: 'BSBA-FM', name: 'Financial Management' },
+    { code: 'BSBA-MM', name: 'Marketing Management' },
+    { code: 'BSBA-HRDM', name: 'Human Resource Dev. Mgmt' },
+    { code: 'BSBA-OA', name: 'Office Administration' }
+];
+const bsbaMajorCodes = bsbaMajors.map(m => m.code);
+const allBsbaSubMajorCodes = [...bsbaMajorCodes, 'BSHRDM', 'BSOA'];
+
+const expandMajorCode = (code) => {
+    const upper = code.toUpperCase();
+    const variants = [upper];
+    if (upper.startsWith('BSBA-')) {
+        const suffix = upper.replace('BSBA-', '');
+        variants.push('BS' + suffix);
+        variants.push(suffix);
+    }
+    return variants;
+};
+
 const Scheduling = () => {
     const navigate = useNavigate();
     const userRole = localStorage.getItem('role');
@@ -66,7 +86,7 @@ const Scheduling = () => {
     const [successMessage, setSuccessMessage] = useState('');
 
     const [formData, setFormData] = useState({
-        room_id: '', instructor_id: '', course_id: '', semester: '', day_of_week: '', start_time: '', end_time: ''
+        room_id: '', instructor_id: '', course_id: '', day_of_week: '', start_time: '', end_time: ''
     });
 
     const [showEditModal, setShowEditModal] = useState(false);
@@ -77,6 +97,16 @@ const Scheduling = () => {
     const [editLoading, setEditLoading] = useState(false);
     const [editError, setEditError] = useState('');
     const [deletingId, setDeletingId] = useState(null);
+    const [programs, setPrograms] = useState([]);
+    const [selectedCourses, setSelectedCourses] = useState([]);
+    const [selectedMajors, setSelectedMajors] = useState([]);
+    const [selectedYearLevels, setSelectedYearLevels] = useState([]);
+    const [courseOpen, setCourseOpen] = useState(false);
+    const [yearOpen, setYearOpen] = useState(false);
+    const [majorOpen, setMajorOpen] = useState(false);
+    const courseRef = useRef(null);
+    const yearRef = useRef(null);
+    const majorRef = useRef(null);
 
     const selectedInstructor = instructors.find(i => String(i.id) === String(formData.instructor_id));
     const isSena = selectedInstructor?.first_name?.toLowerCase().includes("mark") && 
@@ -88,17 +118,19 @@ const Scheduling = () => {
     const loadInitialData = async () => {
         try {
             setLoading(true);
-            const [r, i, s, allS] = await Promise.all([
+            const [r, i, s, allS, p] = await Promise.all([
                 axios.get(`${API_BASE_URL}/rooms`),
                 axios.get(`${API_BASE_URL}/instructors`),
                 axios.get(`${API_BASE_URL}/curriculum`),
-                axios.get(`${API_BASE_URL}/schedules`)
+                axios.get(`${API_BASE_URL}/schedules`),
+                axios.get(`${API_BASE_URL}/academic-programs`)
             ]);
             
             setRooms(Array.isArray(r.data) ? r.data : []);
             setInstructors(Array.isArray(i.data) ? i.data : []);
             setSubjects(Array.isArray(s.data) ? s.data : []);
             setAllSchedules(Array.isArray(allS.data) ? allS.data : []);
+            setPrograms(Array.isArray(p.data) ? p.data : []);
         } catch (err) {
             setError("Failed to load data. Is the server running?");
         } finally {
@@ -108,6 +140,16 @@ const Scheduling = () => {
 
     useEffect(() => {
         loadInitialData();
+    }, []);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (courseRef.current && !courseRef.current.contains(e.target)) setCourseOpen(false);
+            if (yearRef.current && !yearRef.current.contains(e.target)) setYearOpen(false);
+            if (majorRef.current && !majorRef.current.contains(e.target)) setMajorOpen(false);
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     const fetchInstructorSchedules = async (instructorId) => {
@@ -310,7 +352,7 @@ const Scheduling = () => {
             });
             if (response.data.success) {
                 setSuccessMessage("Schedule Saved Successfully!");
-                setFormData({ room_id: '', instructor_id: '', course_id: '', semester: '', day_of_week: '', start_time: '', end_time: '' });
+                setFormData({ room_id: '', instructor_id: '', course_id: '', day_of_week: '', start_time: '', end_time: '' });
                 setWarnings([]);
                 loadInitialData();
             }
@@ -330,47 +372,65 @@ const Scheduling = () => {
         return instructor.gender === 'Female' ? 'avatar3.png' : 'avatar.png';
     };
 
-    // Filter subjects based on instructor department/college
+    // Filter subjects based on instructor department/college + course + year level
     const filteredSubjects = React.useMemo(() => {
-            if (!formData.instructor_id || !selectedInstructor) return subjects;
+        let result = subjects;
 
+        // Step 1: Instructor-based filtering
+        if (formData.instructor_id && selectedInstructor) {
             const dept = selectedInstructor.department;
             const college = selectedInstructor.college;
 
-            // Normalize dept/college: stored values might be full names instead of codes.
             const deptCode = dept && Object.keys(departmentFullNames).find(k => departmentFullNames[k].toLowerCase() === String(dept).toLowerCase()) || dept;
             const collegeCode = college && Object.keys(collegeFullNames).find(k => collegeFullNames[k].toLowerCase() === String(college).toLowerCase()) || college;
 
-            // If instructor record lacks department and college information, don't filter — show all subjects.
-            if (!deptCode && !collegeCode) return subjects;
+            if (deptCode || collegeCode) {
+                result = result.filter(s => {
+                    if (!s.major_subject) return true;
+                    const majorList = s.major_subject.split(',').map(m => m.trim().toUpperCase());
+                    if (dept === 'IT' && majorList.some(m => ['BSIT', 'CSD', 'CHT', 'CCS'].includes(m))) return true;
+                    if (dept === 'HM' && majorList.some(m => ['BSHM', 'BSKP'].includes(m))) return true;
+                    if (dept === 'TM' && majorList.some(m => ['BSTM', 'BSTRM'].includes(m))) return true;
+                    if (dept === 'BA' && majorList.some(m => ['BSBA', 'BSBA-FM', 'BSBA-MM', 'BSBA-HRDM', 'BSBA-OA', 'BSFA', 'CBA'].includes(m))) return true;
+                    if (college === 'CCS' && majorList.some(m => ['BSIT', 'CSD', 'CHT', 'CCS'].includes(m))) return true;
+                    if (college === 'CBA' && majorList.some(m => ['BSBA', 'BSBA-FM', 'BSBA-MM', 'BSBA-HRDM', 'BSBA-OA', 'BSFA', 'CBA'].includes(m))) return true;
+                    if (majorList.includes(dept?.toUpperCase()) || majorList.includes(college?.toUpperCase())) return true;
+                    return false;
+                });
+            }
+        }
 
-        console.debug('Scheduling: selectedInstructor for filtering:', selectedInstructor);
-        console.debug('Scheduling: normalized deptCode, collegeCode:', deptCode, collegeCode);
+        // Step 2: Course filter (multi-select)
+        if (selectedCourses.length > 0) {
+            result = result.filter(s => {
+                const majorList = (s.major_subject || '').split(',').map(m => m.trim().toUpperCase());
+                return selectedCourses.some(c => {
+                    if (c === 'BSBA') {
+                        return majorList.some(m => {
+                            if (m === 'BSBA') return true;
+                            return bsbaMajorCodes.some(code => expandMajorCode(code).includes(m));
+                        });
+                    }
+                    return majorList.includes(c.toUpperCase());
+                });
+            });
+        }
 
-        const result = subjects.filter(s => {
-            if (!s.major_subject) return true; // General subjects?
-            
-            const majorList = s.major_subject.split(',').map(m => m.trim().toUpperCase());
-            
-            // Check department matches
-            if (dept === 'IT' && majorList.some(m => ['BSIT', 'CSD', 'CHT', 'CCS'].includes(m))) return true;
-            if (dept === 'HM' && majorList.some(m => ['BSHM', 'BSKP'].includes(m))) return true;
-            if (dept === 'TM' && majorList.some(m => ['BSTM', 'BSTRM'].includes(m))) return true;
-            if (dept === 'BA' && majorList.some(m => ['BSBA', 'BSBA-FM', 'BSBA-MM', 'BSBA-HRDM', 'BSBA-OM', 'BSFA', 'CBA'].includes(m))) return true;
+        // Step 2b: BSBA Major filter (multi-select)
+        if (selectedMajors.length > 0) {
+            result = result.filter(s => {
+                const majorList = (s.major_subject || '').split(',').map(m => m.trim().toUpperCase());
+                return selectedMajors.some(m => expandMajorCode(m).some(v => majorList.includes(v)));
+            });
+        }
 
-            // Check college matches
-            if (college === 'CCS' && majorList.some(m => ['BSIT', 'CSD', 'CHT', 'CCS'].includes(m))) return true;
-            if (college === 'CBA' && majorList.some(m => ['BSBA', 'BSBA-FM', 'BSBA-MM', 'BSBA-HRDM', 'BSBA-OM', 'BSFA', 'CBA'].includes(m))) return true;
-            
-            // Fallback for general subjects or exact match
-            if (majorList.includes(dept?.toUpperCase()) || majorList.includes(college?.toUpperCase())) return true;
+        // Step 3: Year Level filter (multi-select)
+        if (selectedYearLevels.length > 0) {
+            result = result.filter(s => selectedYearLevels.includes(s.year_level));
+        }
 
-            return false;
-        });
-
-        console.debug('Scheduling: filteredSubjects count:', result.length, result.slice(0,6));
         return result;
-    }, [formData.instructor_id, subjects, selectedInstructor]);
+    }, [formData.instructor_id, subjects, selectedInstructor, selectedCourses, selectedMajors, selectedYearLevels]);
 
     const formatTime = (timeStr) => {
         if (!timeStr) return '';
@@ -436,9 +496,11 @@ const Scheduling = () => {
                                     value={formData.course_id} 
                                     onChange={e => setFormData({...formData, course_id: e.target.value})}>
                                     <option value="">Select Subject</option>
-                                    {filteredSubjects.map(s => (
+                                    {filteredSubjects
+                                        .filter((s, idx, arr) => arr.findIndex(x => x.subject_code === s.subject_code) === idx)
+                                        .map(s => (
                                         <option key={s.id} value={s.id}>
-                                            {s.subject_code} - {s.subject_description} ({s.major_subject})
+                                            {s.subject_code} - {s.subject_description} ({s.semester})
                                         </option>
                                     ))}
                                     {formData.instructor_id && filteredSubjects.length === 0 && (
@@ -455,17 +517,87 @@ const Scheduling = () => {
                                     {instructors.map(i => <option key={i.id} value={i.id}>{i.first_name} {i.last_name}</option>)}
                                 </select>
                             </div>
-                            <div className="col-span-2">
-                                <label className="text-xs font-medium text-slate-500 uppercase">Semester</label>
-                                <div className="flex gap-4 mt-1">
-                                    {['1st Sem', '2nd Sem'].map(sem => (
-                                        <label key={sem} className="flex items-center gap-2 text-sm cursor-pointer">
-                                            <input type="radio" name="semester" value={sem} checked={formData.semester === sem}
-                                                onChange={e => setFormData({...formData, semester: e.target.value})} required /> {sem}
+                            <div className="col-span-2 sm:col-span-1 relative" ref={courseRef}>
+                                <label className="text-xs font-medium text-slate-500 uppercase">Course</label>
+                                <button type="button"
+                                    onClick={() => setCourseOpen(!courseOpen)}
+                                    className="w-full p-2.5 bg-slate-50 border rounded text-sm text-left flex justify-between items-center">
+                                    <span>{selectedCourses.length === 0 ? 'All Courses' : `${selectedCourses.length} selected`}</span>
+                                    <span className={`text-slate-400 transition-transform ${courseOpen ? 'rotate-180' : ''}`}>▼</span>
+                                </button>
+                                {courseOpen && (
+                                    <div className="absolute z-20 mt-1 w-full bg-white border rounded shadow-lg max-h-60 overflow-y-auto">
+                                        <label className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 cursor-pointer text-sm border-b">
+                                            <input type="checkbox" checked={selectedCourses.length === 0}
+                                                onChange={() => setSelectedCourses([])} />
+                                            All Courses
                                         </label>
-                                    ))}
-                                </div>
+                                        <label className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 cursor-pointer text-sm">
+                                            <input type="checkbox" checked={selectedCourses.includes('BSBA')}
+                                                onChange={e => setSelectedCourses(e.target.checked ? [...selectedCourses, 'BSBA'] : selectedCourses.filter(c => c !== 'BSBA'))} />
+                                            BSBA (All Majors)
+                                        </label>
+                                        {programs.filter(p => !allBsbaSubMajorCodes.includes(p.program_code)).map(p => (
+                                            <label key={p.program_code} className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 cursor-pointer text-sm">
+                                                <input type="checkbox" checked={selectedCourses.includes(p.program_code)}
+                                                    onChange={e => setSelectedCourses(e.target.checked ? [...selectedCourses, p.program_code] : selectedCourses.filter(c => c !== p.program_code))} />
+                                                {p.program_code}
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
+                            {selectedCourses.includes('BSBA') && (
+                                <div className="col-span-2 sm:col-span-1 relative" ref={majorRef}>
+                                    <label className="text-xs font-medium text-slate-500 uppercase">BSBA Major</label>
+                                    <button type="button"
+                                        onClick={() => setMajorOpen(!majorOpen)}
+                                        className="w-full p-2.5 bg-slate-50 border rounded text-sm text-left flex justify-between items-center">
+                                        <span>{selectedMajors.length === 0 ? 'All BSBA Majors' : `${selectedMajors.length} selected`}</span>
+                                        <span className={`text-slate-400 transition-transform ${majorOpen ? 'rotate-180' : ''}`}>▼</span>
+                                    </button>
+                                    {majorOpen && (
+                                        <div className="absolute z-20 mt-1 w-full bg-white border rounded shadow-lg">
+                                            {bsbaMajors.map(m => (
+                                                <label key={m.code} className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 cursor-pointer text-sm">
+                                                    <input type="checkbox" checked={selectedMajors.includes(m.code)}
+                                                        onChange={e => setSelectedMajors(e.target.checked ? [...selectedMajors, m.code] : selectedMajors.filter(c => c !== m.code))} />
+                                                    {m.name}
+                                                </label>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            <div className="col-span-2 sm:col-span-1 relative" ref={yearRef}>
+                                <label className="text-xs font-medium text-slate-500 uppercase">Year Level</label>
+                                <button type="button"
+                                    onClick={() => setYearOpen(!yearOpen)}
+                                    className="w-full p-2.5 bg-slate-50 border rounded text-sm text-left flex justify-between items-center">
+                                    <span>{selectedYearLevels.length === 0 ? 'All Years' : `${selectedYearLevels.length} selected`}</span>
+                                    <span className={`text-slate-400 transition-transform ${yearOpen ? 'rotate-180' : ''}`}>▼</span>
+                                </button>
+                                {yearOpen && (
+                                    <div className="absolute z-20 mt-1 w-full bg-white border rounded shadow-lg">
+                                        {['1st Year', '2nd Year', '3rd Year', '4th Year'].map(yr => (
+                                            <label key={yr} className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 cursor-pointer text-sm">
+                                                <input type="checkbox" checked={selectedYearLevels.includes(yr)}
+                                                    onChange={e => setSelectedYearLevels(e.target.checked ? [...selectedYearLevels, yr] : selectedYearLevels.filter(y => y !== yr))} />
+                                                {yr}
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            {formData.course_id && (() => {
+                                const selSub = subjects.find(sub => String(sub.id) === String(formData.course_id));
+                                return selSub?.semester ? (
+                                    <div className="col-span-2">
+                                        <label className="text-xs font-medium text-slate-500 uppercase">Semester</label>
+                                        <p className="text-sm font-semibold text-slate-700 mt-1">{selSub.semester}</p>
+                                    </div>
+                                ) : null;
+                            })()}
                             <div>
                                 <label className="text-xs font-medium text-slate-500 uppercase">Room</label>
                                 <select required className="w-full p-2.5 bg-slate-50 border rounded text-sm" 

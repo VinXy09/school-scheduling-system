@@ -38,10 +38,10 @@ const GlobalSearch = () => {
     setLoading(true);
     try {
       const [instructors, rooms, courses, schedules] = await Promise.all([
-        axios.get(`${API_BASE_URL}/instructors?search=${searchQuery}`).catch(() => ({ data: [] })),
-        axios.get(`${API_BASE_URL}/rooms?search=${searchQuery}`).catch(() => ({ data: [] })),
-        axios.get(`${API_BASE_URL}/courses?search=${searchQuery}`).catch(() => ({ data: [] })),
-        axios.get(`${API_BASE_URL}/schedules?search=${searchQuery}`).catch(() => ({ data: [] }))
+        axios.get(`${API_BASE_URL}/search/instructors?q=${searchQuery}`).catch(() => ({ data: [] })),
+        axios.get(`${API_BASE_URL}/search/rooms?q=${searchQuery}`).catch(() => ({ data: [] })),
+        axios.get(`${API_BASE_URL}/search/courses?q=${searchQuery}`).catch(() => ({ data: [] })),
+        axios.get(`${API_BASE_URL}/search/schedules?q=${searchQuery}`).catch(() => ({ data: [] }))
       ]);
 
       setResults({

@@ -2,11 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Plus, Home, ChevronRight, Trash2, Loader2, Search, ChevronDown, ChevronUp, FlaskConical, Hash, BookMarked, Edit2, X, Save, Check, Activity } from 'lucide-react';
 import axios from 'axios';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL } from '../../config';
 
 const Curriculum = () => {
   const navigate = useNavigate();
-  const bsbaSubMajors = ['BSBA-OM', 'BSBA-FM', 'BSBA-HRDM', 'BSBA-MM', 'BSFM', 'BSMM', 'BSHRDM', 'BSOM'];
+  const bsbaSubMajors = ['BSBA-OA', 'BSBA-FM', 'BSBA-HRDM', 'BSBA-MM', 'BSFM', 'BSMM', 'BSHRDM', 'BSOA'];
   
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,6 +26,8 @@ const Curriculum = () => {
     major_subjects: [],
     hours: '',
     is_lab: 0,
+    is_thesis: 0,
+    is_feasibility: 0,
     year_level: '1st Year',
     semester: '1st Semester'
   });
@@ -131,6 +133,8 @@ const Curriculum = () => {
       major_subjects: existingMajors,
       hours: subject.hours || '',
       is_lab: subject.is_lab || 0,
+      is_thesis: subject.is_thesis || 0,
+      is_feasibility: subject.is_feasibility || 0,
       year_level: subject.year_level || '1st Year',
       semester: subject.semester || '1st Semester'
     });
@@ -163,6 +167,8 @@ const Curriculum = () => {
         major_subjects: editForm.major_subjects,
         hours: parseInt(editForm.hours) || 0,
         is_lab: editForm.is_lab,
+        is_thesis: editForm.is_thesis,
+        is_feasibility: editForm.is_feasibility,
         year_level: editForm.year_level,
         semester: editForm.semester
       }, {
@@ -231,10 +237,12 @@ const Curriculum = () => {
       }
       
       const matchesClassification = filterClassification === 'all' || 
-        (filterClassification === 'Lecture' && sub.is_lab === 0) ||
+        (filterClassification === 'Lecture' && sub.is_lab === 0 && !sub.is_thesis && !sub.is_feasibility) ||
         (filterClassification === 'Laboratory' && sub.is_lab === 1) ||
         (filterClassification === 'Gymnasium' && sub.is_lab === 2) ||
-        (filterClassification === 'OJT' && sub.is_lab === 3);
+        (filterClassification === 'OJT' && sub.is_lab === 3) ||
+        (filterClassification === 'Thesis' && sub.is_thesis) ||
+        (filterClassification === 'Feasibility' && sub.is_feasibility);
       return matchesSearch && matchesMajor && matchesClassification;
     });
 
@@ -298,37 +306,49 @@ const Curriculum = () => {
   };
 
   const getClassificationCounts = (majorSubjects) => {
-    let lect = 0, lab = 0, gym = 0, ojt = 0;
+    let lect = 0, lab = 0, gym = 0, ojt = 0, thesis = 0, feasib = 0;
     Object.values(majorSubjects).forEach(yearObj => {
       Object.values(yearObj).forEach(semArr => {
-        lect += semArr.filter(s => s.is_lab === 0).length;
+        lect += semArr.filter(s => s.is_lab === 0 && !s.is_thesis && !s.is_feasibility).length;
         lab += semArr.filter(s => s.is_lab === 1).length;
         gym += semArr.filter(s => s.is_lab === 2).length;
         ojt += semArr.filter(s => s.is_lab === 3).length;
+        thesis += semArr.filter(s => s.is_thesis).length;
+        feasib += semArr.filter(s => s.is_feasibility).length;
       });
     });
-    return { lect, lab, gym, ojt };
+    return { lect, lab, gym, ojt, thesis, feasib };
   };
 
   const stats = useMemo(() => {
-    const total = subjects.length;
-    const lectureCount = subjects.filter(s => s.is_lab === 0).length;
+    const total = new Set(subjects.map(s => s.subject_code)).size;
+    const lectureCount = subjects.filter(s => s.is_lab === 0 && !s.is_thesis && !s.is_feasibility).length;
     const labCount = subjects.filter(s => s.is_lab === 1).length;
     const gymCount = subjects.filter(s => s.is_lab === 2).length;
     const ojtCount = subjects.filter(s => s.is_lab === 3).length;
+    const thesisCount = subjects.filter(s => s.is_thesis).length;
+    const feasibCount = subjects.filter(s => s.is_feasibility).length;
     const majorCount = uniqueMajors.length;
-    return { total, lectureCount, labCount, gymCount, ojtCount, majorCount };
+    return { total, lectureCount, labCount, gymCount, ojtCount, thesisCount, feasibCount, majorCount };
   }, [subjects, uniqueMajors]);
 
-  const getClassificationLabel = (isLab) => {
-    if (isLab === 1) return 'Laboratory';
-    if (isLab === 2) return 'Gymnasium';
+  const getClassificationLabel = (sub) => {
+    if (sub.is_thesis && sub.is_feasibility) return 'Thesis / Feasibility';
+    if (sub.is_thesis) return 'Thesis';
+    if (sub.is_feasibility) return 'Feasibility (Feasib)';
+    if (sub.is_lab === 1) return 'Laboratory';
+    if (sub.is_lab === 2) return 'Gymnasium';
+    if (sub.is_lab === 3) return 'OJT';
     return 'Lecture';
   };
 
-  const getClassificationColor = (isLab) => {
-    if (isLab === 1) return 'bg-purple-100 text-purple-700 border-purple-200';
-    if (isLab === 2) return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+  const getClassificationColor = (sub) => {
+    if (sub.is_thesis && sub.is_feasibility) return 'bg-pink-100 text-pink-700 border-pink-200';
+    if (sub.is_thesis) return 'bg-rose-100 text-rose-700 border-rose-200';
+    if (sub.is_feasibility) return 'bg-cyan-100 text-cyan-700 border-cyan-200';
+    if (sub.is_lab === 1) return 'bg-purple-100 text-purple-700 border-purple-200';
+    if (sub.is_lab === 2) return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+    if (sub.is_lab === 3) return 'bg-orange-100 text-orange-700 border-orange-200';
     return 'bg-blue-100 text-blue-700 border-blue-200';
   };
 
@@ -346,7 +366,7 @@ const Curriculum = () => {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-5 gap-4 mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-5">
         <div className="bg-white rounded-md shadow-sm border border-slate-200 p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-slate-100 rounded">
@@ -397,8 +417,30 @@ const Curriculum = () => {
               <Hash className="text-amber-600" size={18} />
             </div>
             <div>
-              <p className="text-xs text-slate-500 font-medium uppercase">Programs/Majors</p>
-              <p className="text-lg font-semibold text-slate-800">{stats.majorCount}</p>
+              <p className="text-xs text-slate-500 font-medium uppercase">OJT</p>
+              <p className="text-lg font-semibold text-slate-800">{stats.ojtCount}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-md shadow-sm border border-slate-200 p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-rose-50 rounded">
+              <BookOpen className="text-rose-600" size={18} />
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 font-medium uppercase">Thesis</p>
+              <p className="text-lg font-semibold text-slate-800">{stats.thesisCount}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-md shadow-sm border border-slate-200 p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-cyan-50 rounded">
+              <BookOpen className="text-cyan-600" size={18} />
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 font-medium uppercase">Feasibility</p>
+              <p className="text-lg font-semibold text-slate-800">{stats.feasibCount}</p>
             </div>
           </div>
         </div>
@@ -480,6 +522,8 @@ const Curriculum = () => {
               <option value="Laboratory">Laboratory Only</option>
               <option value="Gymnasium">Gymnasium Only</option>
               <option value="OJT">OJT Only</option>
+              <option value="Thesis">Thesis Only</option>
+              <option value="Feasibility">Feasibility Only</option>
             </select>
 
             {userRole === 'super_admin' && (
@@ -507,8 +551,8 @@ const Curriculum = () => {
           ) : (
             <div className="p-4 space-y-3">
               {(() => {
-                const bsbaSubMajors = ['BSBA-OM', 'BSBA-FM', 'BSBA-HRDM', 'BSBA-MM'];
-                const topLevelMajors = Object.keys(groupedSubjects).filter(m => !bsbaSubMajors.includes(m));
+                const subMajors = ['BSBA-OA', 'BSBA-FM', 'BSBA-HRDM', 'BSBA-MM'];
+                const topLevelMajors = Object.keys(groupedSubjects).filter(m => !subMajors.includes(m));
                 
                 // Ensure BSBA is in topLevelMajors if any sub-major exists, even if BSBA has no core subjects
                 const hasSubMajors = bsbaSubMajors.some(sm => groupedSubjects[sm]);
@@ -578,13 +622,8 @@ const Curriculum = () => {
                                             )}
                                             <div className="flex flex-col items-start gap-1">
                                               <span className="font-black text-blue-700">{sub.subject_code}</span>
-                                              <span className={`px-2 py-0.5 text-[9px] font-bold uppercase rounded border ${
-                                                 sub.is_lab === 1 ? 'bg-purple-50 text-purple-600 border-purple-200' : 
-                                                 sub.is_lab === 2 ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 
-                                                 sub.is_lab === 3 ? 'bg-orange-50 text-orange-600 border-orange-200' :
-                                                 'bg-blue-50 text-blue-600 border-blue-200'
-                                              }`}>
-                                                {sub.is_lab === 1 ? 'Laboratory' : sub.is_lab === 2 ? 'Gymnasium' : sub.is_lab === 3 ? 'OJT' : 'Lecture'}
+                                              <span className={`px-2 py-0.5 text-[9px] font-bold uppercase rounded border ${getClassificationColor(sub)}`}>
+                                                {getClassificationLabel(sub)}
                                               </span>
                                             </div>
                                           </div>
@@ -628,8 +667,15 @@ const Curriculum = () => {
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-slate-500">
                         {(() => {
-                          const { lect, lab, gym, ojt } = getClassificationCounts(majorSubjects);
-                          return `${lect} Lecture, ${lab} Lab, ${gym} Gym, ${ojt} OJT`;
+                          const { lect, lab, gym, ojt, thesis, feasib } = getClassificationCounts(majorSubjects);
+                          let parts = [];
+                          if (lect) parts.push(`${lect} Lecture`);
+                          if (lab) parts.push(`${lab} Lab`);
+                          if (gym) parts.push(`${gym} Gym`);
+                          if (ojt) parts.push(`${ojt} OJT`);
+                          if (thesis) parts.push(`${thesis} Thesis`);
+                          if (feasib) parts.push(`${feasib} Feasib`);
+                          return parts.join(', ');
                         })()}
                       </span>
                       {expandedMajors[major] ? (
@@ -749,7 +795,7 @@ const Curriculum = () => {
 
               <div>
                 <label className="text-xs font-medium text-slate-500 uppercase mb-2 block">Classification</label>
-                <div className="flex gap-4">
+                <div className="flex gap-4 mb-2">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input 
                       type="radio" 
@@ -791,6 +837,26 @@ const Curriculum = () => {
                     <span className="text-sm text-slate-700">OJT</span>
                   </label>
                 </div>
+                <div className="flex gap-4 pt-1 border-t border-slate-100">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={editForm.is_thesis || false}
+                      onChange={(e) => setEditForm({...editForm, is_thesis: e.target.checked})}
+                      className="w-4 h-4 text-rose-600 rounded"
+                    />
+                    <span className="text-sm text-slate-700">Thesis</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={editForm.is_feasibility || false}
+                      onChange={(e) => setEditForm({...editForm, is_feasibility: e.target.checked})}
+                      className="w-4 h-4 text-cyan-600 rounded"
+                    />
+                    <span className="text-sm text-slate-700">Feasibility (Feasib)</span>
+                  </label>
+                </div>
               </div>
 
               <div className="flex gap-4">
@@ -830,7 +896,7 @@ const Curriculum = () => {
                     { code: 'BSBA-FM', name: 'Financial Management' },
                     { code: 'BSBA-MM', name: 'Marketing Management' },
                     { code: 'BSBA-HRDM', name: 'Human Resource Dev. Mgmt' },
-                    { code: 'BSBA-OM', name: 'Operations Management' },
+                    { code: 'BSBA-OA', name: 'Office Administration' },
                     { code: 'BSIT', name: 'Information Technology' },
                     { code: 'BSHM', name: 'Hospitality Management' },
                     { code: 'BSTM', name: 'Tourism Management' },
@@ -881,4 +947,3 @@ const Curriculum = () => {
 };
 
 export default Curriculum;
-
