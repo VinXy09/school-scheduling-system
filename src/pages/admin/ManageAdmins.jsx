@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
 import { ShieldCheck, UserPlus, Trash2, ShieldAlert, Loader2, KeyRound, Eye, EyeOff } from 'lucide-react';
+import CustomModal from '../../components/CustomModal';
 
 const ManageAdmins = () => {
     const [admins, setAdmins] = useState([]);
@@ -9,6 +10,7 @@ const ManageAdmins = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [form, setForm] = useState({ username: '', password: '', role: 'admin' });
     const [submitting, setSubmitting] = useState(false);
+    const [deleteConfirm, setDeleteConfirm] = useState(null);
 
     // Fetch the list of administrators
     const fetchAdmins = async () => {
@@ -42,23 +44,27 @@ const ManageAdmins = () => {
         }
     };
 
-    const handleDelete = async (id, name) => {
+    const handleDelete = (id, name) => {
         const currentUser = localStorage.getItem('username');
         if (name === currentUser) {
             return alert("Security Protocol: You cannot delete your own account while logged in.");
         }
+        setDeleteConfirm({ id, name });
+    };
 
-        if (window.confirm(`Are you sure you want to remove ${name} as an administrator?`)) {
-            try {
-                await axios.delete(`${API_BASE_URL}/admins/${id}`);
-                fetchAdmins();
-            } catch (err) {
-                alert("Failed to delete user.");
-            }
+    const confirmDelete = async () => {
+        if (!deleteConfirm) return;
+        try {
+            await axios.delete(`${API_BASE_URL}/admins/${deleteConfirm.id}`);
+            fetchAdmins();
+        } catch (err) {
+            alert("Failed to delete user.");
         }
+        setDeleteConfirm(null);
     };
 
     return (
+        <>
         <div className="p-6 bg-slate-100 min-h-screen">
             <div className="mb-6">
                 <h1 className="text-2xl font-semibold text-slate-800">User Management</h1>
@@ -181,6 +187,17 @@ const ManageAdmins = () => {
                 </div>
             </div>
         </div>
+
+            <CustomModal
+                isOpen={deleteConfirm !== null}
+                onClose={() => setDeleteConfirm(null)}
+                onConfirm={confirmDelete}
+                title="Remove Administrator"
+                message={deleteConfirm ? `Are you sure you want to remove ${deleteConfirm.name} as an administrator?` : ''}
+                type="confirm"
+                confirmText="Remove"
+            />
+        </>
     );
 };
 

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { BookOpen, Plus, Home, ChevronRight, Trash2, Loader2, Search, ChevronDown, ChevronUp, FlaskConical, Hash, BookMarked, Edit2, X, Save, Check, Activity } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
+import CustomModal from '../../components/CustomModal';
 
 const Curriculum = () => {
   const navigate = useNavigate();
@@ -32,6 +33,8 @@ const Curriculum = () => {
     semester: '1st Semester'
   });
   const [saving, setSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [deleteSelectedConfirm, setDeleteSelectedConfirm] = useState(false);
 
   // Multi-select state
   const [selectedSubjects, setSelectedSubjects] = useState([]);
@@ -61,18 +64,22 @@ const Curriculum = () => {
     fetchSubjects();
   }, []);
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this subject?")) {
-      const username = localStorage.getItem('username') || 'system';
-      try {
-        await axios.delete(`${API_BASE_URL}/curriculum/${id}`, {
-          headers: { 'admin-name': username }
-        });
-        fetchSubjects();
-      } catch (err) {
-        alert("Delete failed");
-      }
+  const handleDelete = (id) => {
+    setDeleteConfirm(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
+    const username = localStorage.getItem('username') || 'system';
+    try {
+      await axios.delete(`${API_BASE_URL}/curriculum/${deleteConfirm}`, {
+        headers: { 'admin-name': username }
+      });
+      fetchSubjects();
+    } catch (err) {
+      alert("Delete failed");
     }
+    setDeleteConfirm(null);
   };
 
   const handleCheckboxChange = (id) => {
@@ -91,29 +98,31 @@ const Curriculum = () => {
     }
   };
 
-  const handleDeleteSelected = async () => {
+  const handleDeleteSelected = () => {
     if (selectedSubjects.length === 0) {
       alert("Please select at least one subject to delete");
       return;
     }
-    
-    if (window.confirm(`Are you sure you want to delete ${selectedSubjects.length} subject(s)?`)) {
-      const username = localStorage.getItem('username') || 'system';
-      try {
-        setLoading(true);
-        for (const id of selectedSubjects) {
-          await axios.delete(`${API_BASE_URL}/curriculum/${id}`, {
-            headers: { 'admin-name': username }
-          });
-        }
-        setSelectedSubjects([]);
-        fetchSubjects();
-        alert("Subjects deleted successfully!");
-      } catch (err) {
-        console.error("Delete error:", err);
-        alert("Some deletes failed. Please try again.");
+    setDeleteSelectedConfirm(true);
+  };
+
+  const confirmDeleteSelected = async () => {
+    const username = localStorage.getItem('username') || 'system';
+    try {
+      setLoading(true);
+      for (const id of selectedSubjects) {
+        await axios.delete(`${API_BASE_URL}/curriculum/${id}`, {
+          headers: { 'admin-name': username }
+        });
       }
+      setSelectedSubjects([]);
+      fetchSubjects();
+      alert("Subjects deleted successfully!");
+    } catch (err) {
+      console.error("Delete error:", err);
+      alert("Some deletes failed. Please try again.");
     }
+    setDeleteSelectedConfirm(false);
   };
 
   const handleEdit = (subject) => {
@@ -353,6 +362,7 @@ const Curriculum = () => {
   };
 
   return (
+    <>
     <div className="min-h-screen bg-slate-100 p-6">
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -942,7 +952,28 @@ const Curriculum = () => {
           </div>
         </div>
       )}
+
+      <CustomModal
+        isOpen={deleteConfirm !== null}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={confirmDelete}
+        title="Delete Subject"
+        message="Are you sure you want to delete this subject?"
+        type="confirm"
+        confirmText="Delete"
+      />
+
+      <CustomModal
+        isOpen={deleteSelectedConfirm}
+        onClose={() => setDeleteSelectedConfirm(false)}
+        onConfirm={confirmDeleteSelected}
+        title="Delete Selected Subjects"
+        message={`Are you sure you want to delete ${selectedSubjects.length} subject(s)?`}
+        type="confirm"
+        confirmText="Delete All"
+      />
     </div>
+    </>
   );
 };
 

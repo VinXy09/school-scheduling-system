@@ -113,7 +113,7 @@ const AvatarSelector = ({ avatarType = 'avatar', avatarData = '', gender = '', o
               className="w-full h-full object-cover"
               onError={(e) => {
                 // In case base path needs to be relative
-                e.target.src = avatarType === 'avatar' && avatarData ? avatarData : getFallbackAvatar();
+                e.target.src = avatarType === 'avatar' && avatarData ? `/${avatarData}` : `/${getFallbackAvatar()}`;
               }}
             />
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" onClick={handleUploadClick}>
@@ -184,7 +184,7 @@ const AvatarSelector = ({ avatarType = 'avatar', avatarData = '', gender = '', o
                           src={`/${preset.name}`}
                           alt={preset.label}
                           className="w-full h-full object-cover"
-                          onError={(e) => { e.target.src = preset.name; }}
+                          onError={(e) => { e.target.src = `/${preset.name}`; }}
                         />
                       </div>
                       <span className="text-[10px] text-slate-600 font-medium text-center leading-tight">

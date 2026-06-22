@@ -122,7 +122,7 @@ const Login = ({ setAuth }) => {
                 </div>
                 
                 <div className="relative z-10 mt-auto pt-10">
-                    <p className="text-white/40 text-sm">© 2024 SFICS. All rights reserved.</p>
+                    <p className="text-white/40 text-sm">© {new Date().getFullYear()} SFICS. All rights reserved.</p>
                 </div>
             </div>
 

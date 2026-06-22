@@ -86,6 +86,16 @@ const Reports = () => {
     const formatExamQuarter = (q) =>
         ({ prelim: 'Prelim', midterm: 'Midterm', pre_finals: 'Pre-finals', finals: 'Finals' }[q] || q || '—');
 
+    const escapeHtml = (value) => {
+        if (value === null || value === undefined) return '';
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    };
+
     const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
     const getProfessorName = (instructorId) => {
@@ -118,14 +128,14 @@ const Reports = () => {
         printWindow.document.write('<html><head><title>Daily Schedule</title>');
         printWindow.document.write('<style>body { font-family: Arial, sans-serif; padding: 40px; margin: 0; } h3 { margin-top: 30px; color: #1e3a8a; } table { width: 100%; border-collapse: collapse; margin-bottom: 20px; } th, td { border: 1px solid #ccc; padding: 10px; text-align: left; } th { background-color: #1e3a8a; color: white; font-weight: bold; } .day-header { margin-bottom: 10px; font-size: 18px; font-weight: bold; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px; }</style></head><body>');
         printWindow.document.write('<h2 style="text-align: center;">Daily Class Schedule</h2>');
-        printWindow.document.write('<p><strong>Professor:</strong> ' + instructor.first_name + ' ' + instructor.last_name + '</p>');
+        printWindow.document.write('<p><strong>Professor:</strong> ' + escapeHtml(instructor.first_name) + ' ' + escapeHtml(instructor.last_name) + '</p>');
         dayOrder.forEach(day => {
             const daySchedules = grouped[day] || [];
             if (daySchedules.length > 0) {
                 printWindow.document.write('<div class="day-header">' + day + '</div>');
                 printWindow.document.write('<table><thead><tr><th>Professor</th><th>Subject</th><th>Time</th><th>Room</th></tr></thead><tbody>');
                 daySchedules.forEach(schedule => {
-                    printWindow.document.write('<tr><td>' + getProfessorName(schedule.instructor_id) + '</td><td>' + (schedule.subject_description || 'N/A') + '</td><td>' + formatTime(schedule.start_time) + ' - ' + formatTime(schedule.end_time) + '</td><td>' + (schedule.room_name || 'N/A') + '</td></tr>');
+                    printWindow.document.write('<tr><td>' + escapeHtml(getProfessorName(schedule.instructor_id)) + '</td><td>' + (escapeHtml(schedule.subject_description) || 'N/A') + '</td><td>' + escapeHtml(formatTime(schedule.start_time)) + ' - ' + escapeHtml(formatTime(schedule.end_time)) + '</td><td>' + (escapeHtml(schedule.room_name) || 'N/A') + '</td></tr>');
                 });
                 printWindow.document.write('</tbody></table>');
             }
@@ -153,7 +163,7 @@ const Reports = () => {
                 printWindow.document.write('<h3 class="day-header">' + day + '</h3>');
                 printWindow.document.write('<table><thead><tr><th>Professor</th><th>Subject</th><th>Time</th><th>Room</th></tr></thead><tbody>');
                 daySchedules.forEach(schedule => {
-                    printWindow.document.write('<tr><td style="font-weight: 500;">' + getProfessorName(schedule.instructor_id) + '</td><td>' + (schedule.subject_description || 'N/A') + '</td><td>' + formatTime(schedule.start_time) + ' - ' + formatTime(schedule.end_time) + '</td><td style="background-color: #f1f5f9; font-weight: 500;">' + (schedule.room_name || 'N/A') + '</td></tr>');
+                    printWindow.document.write('<tr><td style="font-weight: 500;">' + escapeHtml(getProfessorName(schedule.instructor_id)) + '</td><td>' + (escapeHtml(schedule.subject_description) || 'N/A') + '</td><td>' + escapeHtml(formatTime(schedule.start_time)) + ' - ' + escapeHtml(formatTime(schedule.end_time)) + '</td><td style="background-color: #f1f5f9; font-weight: 500;">' + (escapeHtml(schedule.room_name) || 'N/A') + '</td></tr>');
                 });
                 printWindow.document.write('</tbody></table>');
             }
@@ -174,11 +184,11 @@ const handlePrintExamSchedule = () => {
         printWindow.document.write('<html><head><title>Exam Schedule</title>');
         printWindow.document.write('<style>body { font-family: Arial, sans-serif; padding: 40px; } table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid #ccc; padding: 8px; text-align: left; } th { background-color: #1e3a8a; color: white; }</style></head><body>');
         printWindow.document.write('<h2>Exam Schedule</h2>');
-        printWindow.document.write('<p><strong>Professor:</strong> ' + instructor.first_name + ' ' + instructor.last_name + '</p>');
+        printWindow.document.write('<p><strong>Professor:</strong> ' + escapeHtml(instructor.first_name) + ' ' + escapeHtml(instructor.last_name) + '</p>');
         if (instructorExams.length > 0) {
             printWindow.document.write('<table><thead><tr><th>Date</th><th>Time</th><th>Subject</th><th>Quarter</th><th>Year</th><th>Semester</th></tr></thead><tbody>');
             instructorExams.forEach(exam => {
-                printWindow.document.write('<tr><td>' + formatDate(exam.exam_date) + '</td><td>' + formatTime(exam.start_time) + ' - ' + formatTime(exam.end_time) + '</td><td>' + (exam.subject_description || 'N/A') + '</td><td>' + formatExamQuarter(exam.exam_quarter) + '</td><td>' + (exam.year_level || '—') + '</td><td>' + (exam.semester || '—') + '</td></tr>');
+                printWindow.document.write('<tr><td>' + escapeHtml(formatDate(exam.exam_date)) + '</td><td>' + escapeHtml(formatTime(exam.start_time)) + ' - ' + escapeHtml(formatTime(exam.end_time)) + '</td><td>' + (escapeHtml(exam.subject_description) || 'N/A') + '</td><td>' + escapeHtml(formatExamQuarter(exam.exam_quarter)) + '</td><td>' + (escapeHtml(exam.year_level) || '—') + '</td><td>' + (escapeHtml(exam.semester) || '—') + '</td></tr>');
             });
             printWindow.document.write('</tbody></table>');
         } else {
@@ -197,10 +207,10 @@ const handlePrintExamSchedule = () => {
 instructors.forEach(instructor => {
             const profExams = getFilteredExams(instructor.id);
             if (profExams.length === 0) return;
-            printWindow.document.write('<h3>' + instructor.first_name + ' ' + instructor.last_name + '</h3>');
+            printWindow.document.write('<h3>' + escapeHtml(instructor.first_name) + ' ' + escapeHtml(instructor.last_name) + '</h3>');
             printWindow.document.write('<table><thead><tr><th>Date</th><th>Time</th><th>Subject</th><th>Quarter</th><th>Year</th><th>Semester</th></tr></thead><tbody>');
             profExams.forEach(exam => {
-                printWindow.document.write('<tr><td>' + formatDate(exam.exam_date) + '</td><td>' + formatTime(exam.start_time) + ' - ' + formatTime(exam.end_time) + '</td><td>' + (exam.subject_description || 'N/A') + '</td><td>' + formatExamQuarter(exam.exam_quarter) + '</td><td>' + (exam.year_level || '—') + '</td><td>' + (exam.semester || '—') + '</td></tr>');
+                printWindow.document.write('<tr><td>' + escapeHtml(formatDate(exam.exam_date)) + '</td><td>' + escapeHtml(formatTime(exam.start_time)) + ' - ' + escapeHtml(formatTime(exam.end_time)) + '</td><td>' + (escapeHtml(exam.subject_description) || 'N/A') + '</td><td>' + escapeHtml(formatExamQuarter(exam.exam_quarter)) + '</td><td>' + (escapeHtml(exam.year_level) || '—') + '</td><td>' + (escapeHtml(exam.semester) || '—') + '</td></tr>');
             });
             printWindow.document.write('</tbody></table>');
         });
@@ -241,7 +251,7 @@ instructors.forEach(instructor => {
             htmlContent += '<div class="instructor-info"><strong>All Professors</strong></div>';
         } else {
             const instructor = getSelectedInstructorData();
-            htmlContent += `<div class="instructor-info"><strong>${instructor?.first_name} ${instructor?.last_name}</strong> (ID: ${instructor?.employee_id || 'N/A'})</div>`;
+            htmlContent += `<div class="instructor-info"><strong>${escapeHtml(instructor?.first_name)} ${escapeHtml(instructor?.last_name)}</strong> (ID: ${escapeHtml(instructor?.employee_id) || 'N/A'})</div>`;
         }
 
         if (scheduleType === 'daily') {
@@ -258,10 +268,10 @@ instructors.forEach(instructor => {
                     daySchedules.forEach(schedule => {
                         htmlContent += `
                             <tr>
-                                <td style="font-weight: 500;">${getProfessorName(schedule.instructor_id)}</td>
-                                <td>${schedule.subject_description || 'N/A'}</td>
+                                <td style="font-weight: 500;">${escapeHtml(getProfessorName(schedule.instructor_id))}</td>
+                                <td>${escapeHtml(schedule.subject_description) || 'N/A'}</td>
                                 <td>${formatTime(schedule.start_time)} - ${formatTime(schedule.end_time)}</td>
-                                <td class="room">${schedule.room_name || 'N/A'}</td>
+                                <td class="room">${escapeHtml(schedule.room_name) || 'N/A'}</td>
                             </tr>
                         `;
                     });
@@ -278,15 +288,15 @@ instructors.forEach(instructor => {
                 const profExams = getFilteredExams(instructor.id);
                 if (isSelectAll || instructor.id === parseInt(selectedInstructor)) {
                     if (profExams.length > 0) {
-                        htmlContent += `<h3 style="margin-bottom: 10px; color: #374151;">${instructor.first_name} ${instructor.last_name}</h3>`;
+                        htmlContent += `<h3 style="margin-bottom: 10px; color: #374151;">${escapeHtml(instructor.first_name)} ${escapeHtml(instructor.last_name)}</h3>`;
                         htmlContent += '<table><thead><tr><th>Date</th><th>Time</th><th>Subject</th><th>Room</th></tr></thead><tbody>';
                         profExams.forEach(exam => {
                             htmlContent += `
                                 <tr>
                                     <td>${formatDate(exam.exam_date)}</td>
                                     <td>${formatTime(exam.start_time)} - ${formatTime(exam.end_time)}</td>
-                                    <td>${exam.subject_description || 'N/A'}</td>
-                                    <td>${exam.room_name || 'N/A'}</td>
+                                    <td>${escapeHtml(exam.subject_description) || 'N/A'}</td>
+                                    <td>${escapeHtml(exam.room_name) || 'N/A'}</td>
                                 </tr>
                             `;
                         });

@@ -19,6 +19,7 @@ import {
     Clock, 
     Trash2 
 } from 'lucide-react';
+import CustomModal from '../components/CustomModal';
 
 const API = API_BASE_URL;
 
@@ -69,6 +70,7 @@ const Exam = () => {
 
     const [conflict, setConflict] = useState(null);
     const [checkingConflict, setCheckingConflict] = useState(false);
+    const [deleteConfirm, setDeleteConfirm] = useState(null);
 
     const [printModal, setPrintModal] = useState({ open: false, action: null });
     const [modalQuarter, setModalQuarter] = useState('prelim');
@@ -267,15 +269,19 @@ const Exam = () => {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Delete this exam schedule?')) return;
+        setDeleteConfirm(id);
+    };
 
+    const confirmDelete = async () => {
+        if (!deleteConfirm) return;
         try {
-            await axios.delete(`${API}/exams/${id}`);
-            setExams((prev) => prev.filter((exam) => exam.id !== id));
+            await axios.delete(`${API}/exams/${deleteConfirm}`);
+            setExams((prev) => prev.filter((exam) => exam.id !== deleteConfirm));
             setSuccess('Exam schedule deleted.');
         } catch (err) {
             setError('Failed to delete exam schedule.');
         }
+        setDeleteConfirm(null);
     };
 
     const formatDate = (dateStr) => {
@@ -487,6 +493,7 @@ const Exam = () => {
     }
 
     return (
+        <>
         <div className="p-6 bg-slate-100 min-h-screen">
             <button
                 type="button"
@@ -910,6 +917,17 @@ const Exam = () => {
                 </div>
             </div>
         </div>
+
+        <CustomModal
+            isOpen={deleteConfirm !== null}
+            onClose={() => setDeleteConfirm(null)}
+            onConfirm={confirmDelete}
+            title="Delete Exam Schedule"
+            message="Are you sure you want to delete this exam schedule?"
+            type="confirm"
+            confirmText="Delete"
+        />
+        </>
     );
 };
 

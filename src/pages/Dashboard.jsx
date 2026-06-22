@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
     Users, DoorOpen, BookOpen, Calendar, 
     Plus, Clock, ArrowRight, CheckCircle2, LogIn, LogOut,
-    TrendingUp, Activity
+    Activity
 } from 'lucide-react';
 
 const Dashboard = () => {

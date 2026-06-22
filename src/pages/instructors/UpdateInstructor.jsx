@@ -202,6 +202,10 @@ const UpdateInstructor = () => {
               <label className="text-xs font-medium text-slate-500 uppercase mb-1 block">City/Municipality</label>
               <input name="municipality_city" value={formData.municipality_city || ''} onChange={handleInputChange} className="w-full border border-slate-200 p-2.5 rounded text-sm" />
             </div>
+            <div>
+              <label className="text-xs font-medium text-slate-500 uppercase mb-1 block">Province</label>
+              <input name="province" value={formData.province || ''} onChange={handleInputChange} className="w-full border border-slate-200 p-2.5 rounded text-sm" placeholder="Province" />
+            </div>
 
             <div>
               <label className="text-xs font-medium text-slate-500 uppercase mb-1 block">Gender</label>

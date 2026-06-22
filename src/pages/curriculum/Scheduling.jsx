@@ -3,31 +3,9 @@ import axios from 'axios';
 import { Save, ChevronLeft, AlertCircle, Loader2, Info, User, Calendar, Clock, MapPin, X, Mail, Phone, Pencil, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../../config';
-
-const collegeFullNames = {
-    'CCS': 'College of Computer Studies',
-    'CBA': 'College of Business Administration',
-    'BSBA': 'Bachelor of Science in Business Administration',
-    'BSTM': 'Bachelor of Science in Tourism Management',
-    'BSTRM': 'Bachelor of Science in Tourism Management',
-    'BSIT': 'Bachelor of Science in Information Technology',
-    'CSD': 'Computer Software Development',
-    'CHT': 'Computer Hardware Technology',
-    'BSFA': 'Bachelor of Science in Financial Technology',
-    'BSKP': 'Bachelor of Science in Kitchen and Pastry',
-    'BSHM': 'Bachelor of Science in Hotel Management',
-    'COE': 'College of Engineering',
-    'BSEd': 'Bachelor of Secondary Education',
-    'BSN': 'Bachelor of Science in Nursing',
-    'CAS': 'College of Arts and Sciences'
-};
-
-const departmentFullNames = {
-    'IT': 'Information Technology',
-    'HM': 'Hospitality Management',
-    'TM': 'Tourism Management',
-    'BA': 'Business Administration'
-};
+import { collegeFullNames, departmentFullNames } from '../../constants';
+import { RESTRICTED_ROOM, RESTRICTED_DAY, isRestrictedInstructor } from '../../utils/roomRestrictions';
+import CustomModal from '../../components/CustomModal';
 
 const normalizeYear = (yr) => {
     if (!yr) return '';
@@ -97,6 +75,7 @@ const Scheduling = () => {
     const [editLoading, setEditLoading] = useState(false);
     const [editError, setEditError] = useState('');
     const [deletingId, setDeletingId] = useState(null);
+    const [confirmAction, setConfirmAction] = useState(null);
     const [programs, setPrograms] = useState([]);
     const [selectedCourses, setSelectedCourses] = useState([]);
     const [selectedMajors, setSelectedMajors] = useState([]);
@@ -109,8 +88,7 @@ const Scheduling = () => {
     const majorRef = useRef(null);
 
     const selectedInstructor = instructors.find(i => String(i.id) === String(formData.instructor_id));
-    const isSena = selectedInstructor?.first_name?.toLowerCase().includes("mark") && 
-                   selectedInstructor?.last_name?.toLowerCase().includes("sena");
+    const isSena = isRestrictedInstructor(selectedInstructor);
     const instructorAvailability = selectedInstructor?.availability || [];
     const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const availableDays = instructorAvailability.length > 0 ? dayOrder.filter(d => instructorAvailability.includes(d)) : dayOrder;
@@ -210,45 +188,54 @@ const Scheduling = () => {
         }
     };
 
-    const handleDeleteSchedule = async (scheduleId) => {
-        if (!window.confirm('Are you sure you want to delete this schedule?')) return;
-        setDeletingId(scheduleId);
-        const username = localStorage.getItem('username') || 'system';
-        try {
-            await axios.delete(`${API_BASE_URL}/schedules/${scheduleId}`, {
-                headers: { 'admin-name': username }
-            });
-            setSuccessMessage('Schedule deleted successfully!');
-            const allS = await axios.get(`${API_BASE_URL}/schedules`);
-            setAllSchedules(allS.data);
-            if (formData.instructor_id) fetchInstructorSchedules(formData.instructor_id);
-        } catch (err) {
-            setError('Error deleting schedule');
-        } finally {
-            setDeletingId(null);
-        }
+    const handleDeleteSchedule = (scheduleId) => {
+        setConfirmAction({ type: 'delete', scheduleId });
     };
 
-    const handleUnassignInstructor = async (schedule) => {
-        if (!window.confirm(`Are you sure you want to remove the instructor from this schedule? This will move the schedule to the Reassign Page.`)) return;
+    const handleUnassignInstructor = (schedule) => {
+        setConfirmAction({ type: 'unassign', schedule });
+    };
+
+    const executeConfirmedAction = async () => {
+        if (!confirmAction) return;
+        const { type, scheduleId: delId, schedule } = confirmAction;
+        setConfirmAction(null);
         const username = localStorage.getItem('username') || 'system';
-        try {
-            const response = await axios.put(`${API_BASE_URL}/schedules/${schedule.id}`, {
-                room_id: schedule.room_id,
-                instructor_id: null,
-                course_id: schedule.course_id,
-                day_of_week: schedule.day_of_week,
-                start_time: schedule.start_time,
-                end_time: schedule.end_time
-            }, { headers: { 'admin-name': username } });
-            
-            if (response.data.success) {
-                setSuccessMessage("Instructor removed. Schedule moved to Reassign Page!");
-                loadInitialData();
+
+        if (type === 'delete') {
+            setDeletingId(delId);
+            try {
+                await axios.delete(`${API_BASE_URL}/schedules/${delId}`, {
+                    headers: { 'admin-name': username }
+                });
+                setSuccessMessage('Schedule deleted successfully!');
+                const allS = await axios.get(`${API_BASE_URL}/schedules`);
+                setAllSchedules(allS.data);
                 if (formData.instructor_id) fetchInstructorSchedules(formData.instructor_id);
+            } catch (err) {
+                setError('Error deleting schedule');
+            } finally {
+                setDeletingId(null);
             }
-        } catch (err) {
-            setError(err.response?.data?.message || "Error removing instructor from schedule.");
+        } else if (type === 'unassign') {
+            try {
+                const response = await axios.put(`${API_BASE_URL}/schedules/${schedule.id}`, {
+                    room_id: schedule.room_id,
+                    instructor_id: null,
+                    course_id: schedule.course_id,
+                    day_of_week: schedule.day_of_week,
+                    start_time: schedule.start_time,
+                    end_time: schedule.end_time
+                }, { headers: { 'admin-name': username } });
+
+                if (response.data.success) {
+                    setSuccessMessage("Instructor removed. Schedule moved to Reassign Page!");
+                    loadInitialData();
+                    if (formData.instructor_id) fetchInstructorSchedules(formData.instructor_id);
+                }
+            } catch (err) {
+                setError(err.response?.data?.message || "Error removing instructor from schedule.");
+            }
         }
     };
 
@@ -605,7 +592,7 @@ const Scheduling = () => {
                                     onChange={e => setFormData({...formData, room_id: e.target.value})}>
                                     <option value="">Select Room</option>
                                     {rooms.map(r => (
-                                        <option key={r.id} value={r.id} disabled={r.room_name === "Computer Laboratory" && formData.day_of_week === "Saturday" && !isSena}>
+                                        <option key={r.id} value={r.id} disabled={r.room_name === RESTRICTED_ROOM && formData.day_of_week === RESTRICTED_DAY && !isSena}>
                                             {r.room_name}
                                         </option>
                                     ))}
@@ -790,6 +777,16 @@ const Scheduling = () => {
                     </div>
                 </div>
             )}
+
+            <CustomModal
+                isOpen={confirmAction !== null}
+                onClose={() => setConfirmAction(null)}
+                onConfirm={executeConfirmedAction}
+                title={confirmAction?.type === 'delete' ? 'Delete Schedule' : 'Unassign Instructor'}
+                message={confirmAction?.type === 'delete' ? 'Are you sure you want to delete this schedule?' : 'Are you sure you want to remove the instructor from this schedule? This will move the schedule to the Reassign Page.'}
+                type="confirm"
+                confirmText={confirmAction?.type === 'delete' ? 'Delete' : 'Unassign'}
+            />
         </div>
     );
 };

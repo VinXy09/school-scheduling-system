@@ -147,6 +147,10 @@ const AddInstructor = () => {
               <label className="text-xs font-medium text-slate-500 uppercase mb-1 block">City/Municipality</label>
               <input name="municipality_city" onChange={handleInputChange} className="w-full border border-slate-200 p-2.5 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" placeholder="City" />
             </div>
+            <div>
+              <label className="text-xs font-medium text-slate-500 uppercase mb-1 block">Province</label>
+              <input name="province" onChange={handleInputChange} className="w-full border border-slate-200 p-2.5 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" placeholder="Province" />
+            </div>
 
             <div>
               <label className="text-xs font-medium text-slate-500 uppercase mb-1 block">Gender</label>

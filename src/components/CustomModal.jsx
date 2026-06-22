@@ -20,14 +20,7 @@ const CustomModal = ({
     success: <CheckCircle2 className="text-emerald-500" size={24} />
   };
 
-  const colors = {
-    confirm: 'blue',
-    alert: 'amber',
-    error: 'red',
-    success: 'emerald'
-  };
-
-  const themeColor = colors[type] || 'blue';
+  const themeColor = type === 'alert' ? 'amber' : type === 'error' ? 'red' : type === 'success' ? 'emerald' : 'blue';
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">

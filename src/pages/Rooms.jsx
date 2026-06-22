@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
 import { MapPin, Plus, Trash2, DoorOpen, Info, Loader2, X, Calendar, Clock, User, BookOpen } from 'lucide-react';
+import CustomModal from '../components/CustomModal';
 
 const Rooms = () => {
     const [rooms, setRooms] = useState([]);
@@ -11,6 +12,7 @@ const Rooms = () => {
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [roomSchedules, setRoomSchedules] = useState([]);
     const [loadingSchedules, setLoadingSchedules] = useState(false);
+    const [deleteConfirm, setDeleteConfirm] = useState(null);
 
     const fetchRooms = async () => {
         try {
@@ -60,22 +62,27 @@ const Rooms = () => {
     }
 };
 
-    const handleDeleteRoom = async (id, name) => {
-        if (window.confirm(`Remove room ${name} from system?`)) {
-            const username = localStorage.getItem('username') || 'system';
-            try {
-                await axios.delete(`${API_BASE_URL}/rooms/${id}`, {
-                    headers: { 'admin-name': username }
-                });
-                fetchRooms();
-            } catch (err) {
-                const errorMsg = err.response?.data?.message || "Cannot delete room: It may have active schedules assigned.";
-                alert(errorMsg);
-            }
+    const handleDeleteRoom = (id, name) => {
+        setDeleteConfirm({ id, name });
+    };
+
+    const confirmDeleteRoom = async () => {
+        if (!deleteConfirm) return;
+        const username = localStorage.getItem('username') || 'system';
+        try {
+            await axios.delete(`${API_BASE_URL}/rooms/${deleteConfirm.id}`, {
+                headers: { 'admin-name': username }
+            });
+            fetchRooms();
+        } catch (err) {
+            const errorMsg = err.response?.data?.message || "Cannot delete room: It may have active schedules assigned.";
+            alert(errorMsg);
         }
+        setDeleteConfirm(null);
     };
 
     return (
+        <>
         <div className="p-6 bg-slate-100 min-h-screen">
             <div className="mb-6">
                 <h1 className="text-2xl font-semibold text-slate-800">Room Management</h1>
@@ -121,7 +128,7 @@ const Rooms = () => {
                         </div>
 
                         <button className="w-full py-2.5 bg-slate-800 text-white rounded font-medium hover:bg-slate-900 transition-colors">
-                            Register Room
+                            Add Facility
                         </button>
                     </form>
                 </div>
@@ -243,6 +250,17 @@ const Rooms = () => {
                 </div>
             )}
         </div>
+
+            <CustomModal
+                isOpen={deleteConfirm !== null}
+                onClose={() => setDeleteConfirm(null)}
+                onConfirm={confirmDeleteRoom}
+                title="Remove Room"
+                message={deleteConfirm ? `Remove room ${deleteConfirm.name} from system?` : ''}
+                type="confirm"
+                confirmText="Remove"
+            />
+        </>
     );
 };
 

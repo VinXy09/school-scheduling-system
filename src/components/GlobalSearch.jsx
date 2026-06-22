@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
 import { useNavigate } from 'react-router-dom';
-import { Search, X, Users, BookOpen, DoorOpen, Calendar, FileText } from 'lucide-react';
+import { Search, X, Users, BookOpen, DoorOpen, Calendar } from 'lucide-react';
 
 const GlobalSearch = () => {
   const [isOpen, setIsOpen] = useState(false);
